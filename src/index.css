@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+@import './styles/print.css';
+
+:root {
+  --background: #f8fafc;
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-strong: #ffffff;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted: #475569;
+  --primary: #4f46e5;
+  --primary-strong: #312e81;
+  --accent: #0ea5e9;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --ring: rgba(79, 70, 229, 0.25);
+  --glass: rgba(255, 255, 255, 0.72);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--foreground);
+  background: var(--background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(79, 70, 229, 0.12), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 30%),
+    var(--background);
+  color: var(--foreground);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+@layer utilities {
+  .bg-academic-gradient {
+    background-image: linear-gradient(135deg, #4f46e5 0%, #4338ca 35%, #0ea5e9 100%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
