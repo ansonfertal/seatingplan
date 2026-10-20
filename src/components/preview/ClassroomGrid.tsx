@@ -2,6 +2,7 @@ import React from 'react';
 import type { AssignedSeat } from '../../models/arrangement';
 import type { Classroom } from '../../models/classroom';
 import type { Student } from '../../models/student';
+import { getClassroomColumnRows } from '../../utils/capacityCalculator';
 
 export type ClassroomGridProps = {
   classroom: Classroom;
@@ -26,9 +27,18 @@ export const ClassroomGrid: React.FC<ClassroomGridProps> = ({
   );
 
   const seatCells = [] as React.ReactNode[];
+  const columnRows = getClassroomColumnRows(classroom.rows, classroom.columns, classroom.columnRows);
+  const displayColumns = classroom.displayColumns ?? ['rollNo', 'branch'];
 
-  for (let row = 0; row < classroom.rows; row += 1) {
-    for (let column = 0; column < classroom.columns; column += 1) {
+  const getDisplayValue = (field: string, student: Student) => {
+    if (field === 'rollNo') return student.registerNumber;
+    if (field === 'name') return student.name;
+    if (field === 'branch') return student.branch;
+    return student.semester || 'Semester —';
+  };
+
+  for (let column = 0; column < classroom.columns; column += 1) {
+    for (let row = 0; row < columnRows[column]; row += 1) {
       const seatCount = classroom.studentsPerBench;
 
       for (let seatIndex = 0; seatIndex < seatCount; seatIndex += 1) {
@@ -76,9 +86,11 @@ export const ClassroomGrid: React.FC<ClassroomGridProps> = ({
           >
             {!isDisabled ? (
               <>
-                <span className="truncate max-w-full font-semibold">{student ? student.registerNumber : 'Empty'}</span>
+                <span className="max-w-full truncate font-semibold">{student ? getDisplayValue(displayColumns[0], student) : 'Empty'}</span>
                 {student ? (
-                  <span className="mt-0.5 max-w-full truncate text-[9px] text-indigo-700">{student.branch}</span>
+                  <span className="mt-0.5 max-w-full truncate text-[9px] text-indigo-700">
+                    {displayColumns.slice(1).map((field) => getDisplayValue(field, student)).join(' | ')}
+                  </span>
                 ) : (
                   <span className="mt-0.5 text-[9px]">Open</span>
                 )}
@@ -92,10 +104,18 @@ export const ClassroomGrid: React.FC<ClassroomGridProps> = ({
     }
   }
 
+  let seatCursor = 0;
+  const columnGroups = Array.from({ length: classroom.columns }, (_, column) => {
+    const seatCount = columnRows[column] * classroom.studentsPerBench;
+    const group = seatCells.slice(seatCursor, seatCursor + seatCount);
+    seatCursor += seatCount;
+    return group;
+  });
+
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${classroom.columns}, minmax(72px, 1fr))` }}>
-        {seatCells}
+      <div className="grid items-start gap-2" style={{ gridTemplateColumns: `repeat(${classroom.columns}, minmax(96px, 1fr))` }}>
+        {columnGroups.map((group, column) => <div key={`preview-column-${column}`} className="grid gap-2">{group}</div>)}
       </div>
     </div>
   );

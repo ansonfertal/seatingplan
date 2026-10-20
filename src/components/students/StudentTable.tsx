@@ -25,11 +25,15 @@ export const StudentTable: React.FC<StudentTableProps> = ({
   const [regNo, setRegNo] = useState('');
   const [name, setName] = useState('');
   const [branch, setBranch] = useState('');
+  const [semester, setSemester] = useState('');
+  const [subjectCode, setSubjectCode] = useState('');
 
   const resetForm = () => {
     setRegNo('');
     setName('');
     setBranch('');
+    setSemester('');
+    setSubjectCode('');
     setIsAdding(false);
     setEditingId(null);
   };
@@ -43,6 +47,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
     setRegNo(student.registerNumber);
     setName(student.name);
     setBranch(student.branch);
+    setSemester(student.semester ?? '');
+    setSubjectCode(student.subjectCode ?? '');
     setEditingId(student.id);
     setIsAdding(false);
   };
@@ -54,6 +60,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
       registerNumber: regNo.trim(),
       name: name.trim(),
       branch: branch.trim().toUpperCase(),
+      semester: semester.trim(),
+      subjectCode: subjectCode.trim().toUpperCase(),
     };
 
     if (isAdding) {
@@ -93,6 +101,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Branch
               </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject Code</th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
@@ -110,6 +120,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                 <td className="px-6 py-3">
                   <input type="text" className="w-32 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 uppercase" placeholder="CS" value={branch} onChange={e => setBranch(e.target.value)} />
                 </td>
+                <td className="px-6 py-3"><input type="text" className="w-24 text-sm border-gray-300 rounded-md p-1.5" placeholder="S5" value={semester} onChange={e => setSemester(e.target.value)} /></td>
+                <td className="px-6 py-3"><input type="text" className="w-28 text-sm border-gray-300 rounded-md p-1.5 uppercase" placeholder="CS501" value={subjectCode} onChange={e => setSubjectCode(e.target.value)} /></td>
                 <td className="px-6 py-3 text-right whitespace-nowrap">
                   <button onClick={handleSave} className="text-green-600 hover:text-green-900 mx-2" title="Save">
                     <Check className="w-5 h-5" />
@@ -123,7 +135,7 @@ export const StudentTable: React.FC<StudentTableProps> = ({
 
             {students.length === 0 && !isAdding ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                   No students added yet. Upload a file or add manually.
                 </td>
               </tr>
@@ -142,6 +154,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                     <td className="px-6 py-3">
                       <input type="text" className="w-32 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 uppercase" value={branch} onChange={e => setBranch(e.target.value)} />
                     </td>
+                    <td className="px-6 py-3"><input type="text" className="w-24 text-sm border-gray-300 rounded-md p-1.5" value={semester} onChange={e => setSemester(e.target.value)} /></td>
+                    <td className="px-6 py-3"><input type="text" className="w-28 text-sm border-gray-300 rounded-md p-1.5 uppercase" value={subjectCode} onChange={e => setSubjectCode(e.target.value)} /></td>
                     <td className="px-6 py-3 text-right whitespace-nowrap">
                       <button onClick={handleSave} className="text-green-600 hover:text-green-900 mx-2">
                         <Check className="w-5 h-5" />
@@ -159,6 +173,8 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
                       {student.name}
                     </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">{student.semester || '—'}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">{student.subjectCode || '—'}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
                         {student.branch}

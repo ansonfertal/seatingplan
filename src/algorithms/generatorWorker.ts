@@ -1,11 +1,17 @@
-import type { AssignedSeat, SeatingArrangement, SeatingRules } from '../models/arrangement';
-import type { Classroom } from '../models/classroom';
-import type { Student } from '../models/student';
-import { allocateStudentsToRooms } from './roomAllocation';
-import { createSeedFromString } from './random';
-import { optimizeSeatingAssignments } from './optimizer';
-import { generateInitialSeating } from './seatingGenerator';
-import { buildValidationReport } from './validator';
+import type {
+  AssignedSeat,
+  ArrangementStatistics,
+  SeatingArrangement,
+  SeatingRules,
+  UnassignedCandidate,
+  ValidationReport,
+} from '../models/arrangement';
+import type { Classroom, Room } from '../models/classroom';
+import type { ExamCandidate, Student } from '../models/student';
+import { generateConstraintAwareSeating } from './seatingGenerator';
+import { validateSeatingPlanIndependently } from './independentValidator';
+import { analyzeAllocationInfeasibility, type InfeasibilityReport } from './infeasibilityAnalyzer';
+import type { RoomFillStrategy } from './roomAllocation';
 
 export type GenerationProgress = {
   stage: string;
@@ -13,11 +19,27 @@ export type GenerationProgress = {
 };
 
 export type GenerationPipelineOptions = {
-  students: Student[];
-  classrooms: Classroom[];
+  students: (Student | ExamCandidate)[];
+  classrooms: (Classroom | Room)[];
   rules: SeatingRules;
-  seed?: string;
+  seed?: string | number;
+  strategy?: RoomFillStrategy;
+  registerNumberOrder?: import('../models/arrangement').RegisterNumberOrder;
+  examDate?: string;
+  minimizeClassroomsUsed?: boolean;
+  differentArrangementPerDate?: boolean;
+  versionId?: string;
   onProgress?: (progress: GenerationProgress) => void;
+};
+
+export type GenerationPipelineResult = {
+  assignments: AssignedSeat[];
+  unassignedCandidates: UnassignedCandidate[];
+  validation: ValidationReport;
+  infeasibilityReport?: InfeasibilityReport;
+  statistics: ArrangementStatistics;
+  generationSeed: number;
+  algorithmVersion: string;
 };
 
 export async function runGenerationPipeline({
@@ -25,45 +47,77 @@ export async function runGenerationPipeline({
   classrooms,
   rules,
   seed = 'default-seed',
+  strategy = 'sequential',
+  registerNumberOrder,
+  examDate,
+  minimizeClassroomsUsed,
+  differentArrangementPerDate,
+  versionId,
   onProgress,
-}: GenerationPipelineOptions): Promise<{
-  assignments: AssignedSeat[];
-  validation: ReturnType<typeof buildValidationReport>;
-}> {
-  allocateStudentsToRooms(students, classrooms, createSeedFromString(seed));
-  onProgress?.({ stage: 'Distributing students across classrooms...', percent: 25 });
+}: GenerationPipelineOptions): Promise<GenerationPipelineResult> {
+  onProgress?.({ stage: 'Initiating constraint-aware allocation engine...', percent: 5 });
 
-  const initialAssignments = generateInitialSeating(students, classrooms, rules, seed);
-  onProgress?.({ stage: 'Generating initial seat placements...', percent: 55 });
+  // Small delay to allow UI to render initial progress state
+  await new Promise((resolve) => setTimeout(resolve, 30));
 
-  const optimizedAssignments = optimizeSeatingAssignments(
-    initialAssignments,
+  // 1. Run deterministic allocator
+  const generationOutput = generateConstraintAwareSeating(students, classrooms, rules, {
+    seed,
+    strategy,
+    registerNumberOrder: registerNumberOrder ?? rules.registerNumberOrder,
+    examDate,
+    minimizeClassroomsUsed: minimizeClassroomsUsed ?? rules.minimizeClassroomsUsed,
+    differentArrangementPerDate: differentArrangementPerDate ?? rules.differentArrangementPerDate,
+    versionId,
+    onProgress,
+  });
+
+  onProgress?.({ stage: 'Running independent decoupled validator (Constraints C1–C5)...', percent: 85 });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  // 2. Run independent validator decoupled from generator
+  const independentResult = validateSeatingPlanIndependently(
+    generationOutput.assignments,
     students,
-    classrooms,
-    rules,
-    80
+    classrooms
   );
-  onProgress?.({ stage: 'Optimizing branch separation and seat conflicts...', percent: 85 });
 
-  const validation = buildValidationReport(optimizedAssignments, students, classrooms, rules);
-  onProgress?.({ stage: 'Checking final seating conflicts...', percent: 100 });
+  const validationReport = independentResult.asValidationReport();
+
+  // 3. Analyze infeasibility if unassigned candidates exist or validation failed
+  let infeasibilityReport: InfeasibilityReport | undefined;
+  if (generationOutput.unassignedCandidates.length > 0 || !independentResult.isValid) {
+    infeasibilityReport = analyzeAllocationInfeasibility(
+      students,
+      classrooms,
+      generationOutput.unassignedCandidates
+    );
+  }
+
+  onProgress?.({ stage: 'Seating generation & independent validation verified.', percent: 100 });
 
   return {
-    assignments: optimizedAssignments,
-    validation,
+    assignments: generationOutput.assignments,
+    unassignedCandidates: generationOutput.unassignedCandidates,
+    validation: validationReport,
+    infeasibilityReport,
+    statistics: independentResult.summary,
+    generationSeed: generationOutput.generationSeed,
+    algorithmVersion: generationOutput.algorithmVersion,
   };
 }
 
 export function buildArrangementFromPipeline(
-  pipeline: Awaited<ReturnType<typeof runGenerationPipeline>>,
-  exam: SeatingArrangement['exam']
+  pipeline: GenerationPipelineResult,
+  exam: SeatingArrangement['exam'],
+  classrooms: (Classroom | Room)[]
 ): SeatingArrangement {
   return {
     exam,
-    classrooms: [],
+    classrooms,
     assignments: pipeline.assignments,
     generatedAt: new Date().toISOString(),
-    generationSeed: 0,
-    statistics: pipeline.validation.summary,
+    generationSeed: pipeline.generationSeed,
+    statistics: pipeline.statistics,
   };
 }

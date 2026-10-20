@@ -1,5 +1,6 @@
-import type { SeatingRules } from '../models/arrangement';
+import { DEFAULT_SEATING_RULES, type SeatingRules } from '../models/arrangement';
 import type { Classroom, SeatPosition } from '../models/classroom';
+import { getClassroomColumnRows } from '../utils/capacityCalculator';
 
 export type SeatNode = {
   key: string;
@@ -18,17 +19,28 @@ export function getSeatKey(seat: SeatPosition): string {
   return `${seat.row}-${seat.column}-${seat.seatIndex}`;
 }
 
-export function buildSeatGraph(classroom: Classroom, rules: SeatingRules): SeatGraph {
+export function buildSeatGraph(classroom: Classroom, rules: SeatingRules = DEFAULT_SEATING_RULES): SeatGraph {
   const nodes: SeatNode[] = [];
   const adjacency: Record<string, string[]> = {};
 
-  for (let row = 0; row < classroom.rows; row += 1) {
+  const columnRows = getClassroomColumnRows(classroom.rows, classroom.columns, classroom.columnRows);
+  const blockedBenches = classroom.blockedBenches || [];
+
+  const maxRows = Math.max(classroom.rows, ...columnRows);
+  for (let row = 0; row < maxRows; row += 1) {
     for (let column = 0; column < classroom.columns; column += 1) {
+      if (row >= columnRows[column]) continue;
+
+      // Skip fully blocked benches
+      const isBenchBlocked = blockedBenches.some((b) => b.row === row && b.column === column);
+      if (isBenchBlocked) continue;
+
       for (let seatIndex = 0; seatIndex < classroom.studentsPerBench; seatIndex += 1) {
         const seat = { row, column, seatIndex };
         const key = getSeatKey(seat);
 
-        const isDisabled = classroom.disabledSeats.some(
+        const disabledSeats = classroom.disabledSeats || [];
+        const isDisabled = disabledSeats.some(
           (disabledSeat) =>
             disabledSeat.row === seat.row &&
             disabledSeat.column === seat.column &&
@@ -62,26 +74,36 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules): SeatG
       }
     };
 
+    // Pairwise same-bench partners (supports 1, 2, or 3 students per bench)
     if (rules.sameBenchSeparation && classroom.studentsPerBench > 1) {
-      const benchPartner = seatIndex === 0 ? 1 : 0;
-      addNeighbor(row, column, benchPartner);
+      for (let partnerIdx = 0; partnerIdx < classroom.studentsPerBench; partnerIdx++) {
+        if (partnerIdx !== seatIndex) {
+          addNeighbor(row, column, partnerIdx);
+        }
+      }
     }
+
+    const addBenchNeighbors = (targetRow: number, targetColumn: number) => {
+      for (let s = 0; s < classroom.studentsPerBench; s++) {
+        addNeighbor(targetRow, targetColumn, s);
+      }
+    };
 
     if (rules.horizontalAdjacency) {
       if (column + 1 < classroom.columns) {
-        addNeighbor(row, column + 1, seatIndex);
+        addBenchNeighbors(row, column + 1);
       }
       if (column - 1 >= 0) {
-        addNeighbor(row, column - 1, seatIndex);
+        addBenchNeighbors(row, column - 1);
       }
     }
 
     if (rules.verticalAdjacency) {
-      if (row + 1 < classroom.rows) {
-        addNeighbor(row + 1, column, seatIndex);
+      if (row + 1 < columnRows[column]) {
+        addBenchNeighbors(row + 1, column);
       }
       if (row - 1 >= 0) {
-        addNeighbor(row - 1, column, seatIndex);
+        addBenchNeighbors(row - 1, column);
       }
     }
 
@@ -97,8 +119,8 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules): SeatG
         const targetRow = row + rowOffset;
         const targetColumn = column + columnOffset;
 
-        if (targetRow >= 0 && targetRow < classroom.rows && targetColumn >= 0 && targetColumn < classroom.columns) {
-          addNeighbor(targetRow, targetColumn, seatIndex);
+        if (targetRow >= 0 && targetColumn >= 0 && targetColumn < classroom.columns && targetRow < columnRows[targetColumn]) {
+          addBenchNeighbors(targetRow, targetColumn);
         }
       });
     }

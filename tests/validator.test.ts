@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { validateSeatingCapacity } from '../src/algorithms/capacityValidator';
+import { validateArrangementConflicts } from '../src/algorithms/validator';
 import { validateStudentData } from '../src/import/studentValidator';
+import { selectExamStudents } from '../src/utils/examStudentSelector';
 
 describe('Capacity and validation engine', () => {
   it('reports insufficient capacity when student count exceeds available seats', () => {
@@ -45,5 +47,48 @@ describe('Capacity and validation engine', () => {
     expect(result.missingBranchCount).toBe(1);
     expect(result.invalidRows[0].issues).toContain('Duplicate Register Number: CS101');
     expect(result.invalidRows[1].issues).toContain('Missing Branch');
+  });
+
+  it('filters exam students by selected semester and subject code', () => {
+    const students = [
+      { id: 'a', registerNumber: 'A1', name: 'A', branch: 'CS', semester: 'S5', subjectCode: 'CS501' },
+      { id: 'b', registerNumber: 'B1', name: 'B', branch: 'EC', semester: 'S5', subjectCode: 'EC501' },
+      { id: 'c', registerNumber: 'C1', name: 'C', branch: 'ME', semester: 'S3', subjectCode: 'CS501' },
+    ];
+    const exam = {
+      examName: 'Internal',
+      examDate: '2026-10-01',
+      session: 'FN' as const,
+      selectedSemesters: ['S5'],
+      selectedSubjectCodes: ['CS501'],
+      institutionName: 'College',
+      institutionLocation: 'City',
+      documentCode: 'DOC',
+    };
+
+    expect(selectExamStudents(students, exam).map((student) => student.id)).toEqual(['a']);
+  });
+
+  it('detects matching semester and subject code between adjacent students', () => {
+    const students = [
+      { id: 'a', registerNumber: 'A1', name: 'A', branch: 'CS', semester: 'S5', subjectCode: 'CS501' },
+      { id: 'b', registerNumber: 'B1', name: 'B', branch: 'EC', semester: 'S5', subjectCode: 'CS501' },
+    ];
+    const classrooms = [{ id: 'room', name: 'Room', rows: 1, columns: 2, studentsPerBench: 1, disabledSeats: [] }];
+    const assignments = [
+      { classroomId: 'room', row: 0, column: 0, seatIndex: 0, studentId: 'a' },
+      { classroomId: 'room', row: 0, column: 1, seatIndex: 0, studentId: 'b' },
+    ];
+    const rules = {
+      sameBenchSeparation: false,
+      horizontalAdjacency: true,
+      verticalAdjacency: false,
+      diagonalAdjacency: false,
+      sameSemesterSeparation: true,
+      sameSubjectCodeSeparation: true,
+    };
+
+    const conflicts = validateArrangementConflicts(assignments, students, classrooms, rules);
+    expect(conflicts.map((conflict) => conflict.reason)).toEqual(['semester', 'subjectCode']);
   });
 });

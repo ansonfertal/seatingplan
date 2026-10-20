@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClassroomList } from '../components/classrooms/ClassroomList';
 import { useAppStore } from '../store/appStore';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export const ClassroomsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -12,26 +12,27 @@ export const ClassroomsScreen: React.FC = () => {
   const canProceed = classrooms.length > 0;
 
   return (
-    <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="py-4 max-w-7xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Classroom Configuration</h1>
-        <p className="text-lg text-gray-600">
-          Define the physical classrooms and their seating arrangements. Disable any seats that are unavailable due to obstructions.
+        <h1 className="text-2xl font-bold text-slate-900 mb-1">Room & Bench Grid Configuration</h1>
+        <p className="text-sm text-slate-500">
+          PRD Requirement 4.3: Physical bench grids, 1–3 seats per bench, configured maximum capacity, and obstruction blocking.
         </p>
       </div>
 
       <ClassroomList />
 
-      <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-        <Button variant="outline" onClick={() => navigate('/exam')} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back to Exam Details
+      {/* Navigation Footer */}
+      <div className="flex justify-between items-center pt-6 border-t border-slate-200">
+        <Button variant="ghost" onClick={() => navigate('/students')} className="flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back to Candidate Roster
         </Button>
-        <Button 
-          onClick={() => navigate('/students')} 
+        <Button
+          onClick={() => navigate('/rules')}
           disabled={!canProceed}
           className="flex items-center gap-2"
         >
-          Continue to Students <ArrowRight className="w-4 h-4" />
+          Continue to Rules & Readiness →
         </Button>
       </div>
     </div>

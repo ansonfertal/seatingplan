@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Print Engine CSS (PRD Section 4.7, TASK-5.1)
+   Standardized A4 Portrait & Landscape print formatting and browser preview
+   ========================================================================== */
+
+/* Screen / Interactive Preview Container */
+.print-paper-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  background-color: #f1f5f9;
+  padding: 24px 0;
+}
+
+.print-sheet {
+  background: white;
+  color: #0f172a;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Standard A4 Dimensions on Screen Preview */
+.print-sheet.portrait {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm;
+}
+
+.print-sheet.landscape {
+  width: 297mm;
+  min-height: 210mm;
+  padding: 14mm 16mm;
+}
+
+/* Single-page fit for Room Seating Plan diagram */
+.print-sheet.landscape.fit-single-page {
+  width: 297mm;
+  height: 210mm;
+  max-height: 210mm;
+  min-height: 210mm;
+  padding: 5mm 8mm;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* Institutional Table Typography */
+.print-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-sheet th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+  border: 1px solid #334155;
+  padding: 6px 8px;
+  font-size: 11px;
+  text-align: left;
+}
+
+.print-sheet td {
+  border: 1px solid #475569;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #0f172a;
+}
+
+/* Minimum handwriting row height */
+.print-sheet .handwriting-row td {
+  height: 32px;
+  vertical-align: middle;
+}
+
+/* Print Media Rules */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  @page landscape {
+    size: A4 landscape;
+    margin: 5mm 6mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Reset vertical spacing between sheets in print */
+  .space-y-8 > * + *,
+  .space-y-6 > * + *,
+  .room-seating-plan-wrapper > * + *,
+  .print-paper-container > * + * {
+    margin-top: 0 !important;
+  }
+
+  /* Hide all interactive wizard UI, navigation, buttons, and sidebars */
+  header,
+  nav,
+  button,
+  .no-print,
+  .wizard-header,
+  .export-screen-actions {
+    display: none !important;
+  }
+
+  .print-paper-container {
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .print-sheet.portrait {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-sheet.landscape {
+    page: landscape;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-sheet.landscape.fit-single-page {
+    page: landscape !important;
+    width: 100% !important;
+    height: 198mm !important;
+    max-height: 198mm !important;
+    min-height: 198mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Repeat table headers across printed pages */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Avoid splitting inside key sections */
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+}

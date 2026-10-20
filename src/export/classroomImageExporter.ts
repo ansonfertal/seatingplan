@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import type { SeatingArrangement } from '../models/arrangement';
 import type { Classroom } from '../models/classroom';
 import type { Student } from '../models/student';
+import { getClassroomColumnRows } from '../utils/capacityCalculator';
 
 export async function downloadClassroomSeatingImage(
   arrangement: SeatingArrangement,
@@ -67,12 +68,14 @@ export async function downloadClassroomSeatingImage(
     roomCard.appendChild(heading);
 
     const seatWrapper = document.createElement('div');
+    const columnRows = getClassroomColumnRows(classroom.rows, classroom.columns, classroom.columnRows);
     seatWrapper.style.display = 'grid';
     seatWrapper.style.gridTemplateColumns = `repeat(${classroom.columns}, minmax(64px, 1fr))`;
     seatWrapper.style.gap = '8px';
 
-    for (let row = 0; row < classroom.rows; row += 1) {
+    for (let row = 0; row < Math.max(...columnRows); row += 1) {
       for (let column = 0; column < classroom.columns; column += 1) {
+        if (row >= columnRows[column]) continue;
         for (let seatIndex = 0; seatIndex < classroom.studentsPerBench; seatIndex += 1) {
           const assignment = arrangement.assignments.find(
             (item) =>

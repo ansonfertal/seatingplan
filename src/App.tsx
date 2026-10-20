@@ -1,5 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AppRouter } from './router';
+import { WizardHeader } from './components/wizard/WizardHeader';
+import { UserRoleSwitcher } from './components/auth/UserRoleSwitcher';
 import './App.css';
 
 function App() {
@@ -12,10 +14,14 @@ function App() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Academic Planning</p>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">Exam Seating Arrangement Generator</h1>
             </div>
+            <div className="flex items-center gap-3">
+              <UserRoleSwitcher />
+            </div>
           </div>
         </header>
 
-        <main>
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <WizardHeader />
           <AppRouter />
         </main>
       </div>

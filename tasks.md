@@ -1,640 +1,578 @@
-# Implementation Tasks — Exam Seating Arrangement Generator
+# Implementation Tasks — Examination Seating Arrangement & Print Pack Generator
 
-This document defines the atomic, phase-based implementation tasks for building the **Exam Seating Arrangement Generator** web application, derived from [`exam_seating_arrangement_generator_PRD.md`](file:///c:/AI%20Pro/seatingplan/exam_seating_arrangement_generator_PRD.md).
+This document establishes the atomic, phase-based implementation tasks for building the **Examination Seating Arrangement & Print Pack Generator** web application, directly derived from [`Exam_Seating_Arrangement_PRD.md`](file:///c:/AI%20Pro/seatingplan/Exam_Seating_Arrangement_PRD.md).
 
 ---
 
-## Task Dependency Overview
+## 1. Phase Dependency Graph
 
 ```mermaid
 graph TD
-    Phase0[Phase 0: Setup & Infrastructure] --> Phase1[Phase 1: Domain Models & State]
-    Phase1 --> Phase2[Phase 2: Exam Details Screen]
-    Phase1 --> Phase3[Phase 3: Classroom Management]
-    Phase1 --> Phase4[Phase 4: Student Input & Import]
-    Phase2 --> Phase5[Phase 5: Capacity & Rule Validation]
-    Phase3 --> Phase5
-    Phase4 --> Phase5
-    Phase5 --> Phase6[Phase 6: Room Allocation & Graph Engine]
-    Phase6 --> Phase7[Phase 7: Optimization & Quality Engine]
-    Phase7 --> Phase8[Phase 8: Generation & Validation UI]
-    Phase8 --> Phase9[Phase 9: Seating Preview & Search]
-    Phase9 --> Phase10[Phase 10: Manual Editing & Undo/Redo]
-    Phase9 --> Phase11[Phase 11: Seating Summary Generator]
-    Phase11 --> Phase12[Phase 12: Excel Export Engine]
-    Phase11 --> Phase13[Phase 13: PDF Export & Print Engine]
-    Phase10 --> Phase14[Phase 14: Draft Persistence & Project JSON]
-    Phase12 --> Phase15[Phase 15: QA & Integration Testing]
-    Phase13 --> Phase15
-    Phase14 --> Phase15
+    classDef pending fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#f8fafc;
+    classDef inProgress fill:#0369a1,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef complete fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#f8fafc;
+
+    P0[Phase 0: Sample Inspection & Decisions]:::complete
+    P1[Phase 1: Foundation, Data Models & Exam Setup]:::complete
+    P2[Phase 2: Student Import & Room Grid Configuration]:::complete
+    P3[Phase 3: Allocation Engine & Independent Validator]:::complete
+    P4[Phase 4: Review, Swaps, Versioning & Finalization]:::complete
+    P5[Phase 5: Five Print Templates & Print Pack Generator]:::complete
+    P6[Phase 6: End-to-End Hardening & Deployment]:::complete
+    P7[Phase 7: Optional Enhancements & Advanced Rules]:::complete
+
+    P0 --> P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+    P4 --> P5
+    P5 --> P6
+    P6 --> P7
+```
+
+### Detailed Component Dependencies
+
+```mermaid
+graph LR
+    subgraph Data & Setup
+        T1_1[Domain Models C1-C6] --> T1_2[Zustand Store & Versioning]
+        T1_2 --> T1_3[Exam Setup CRUD]
+    end
+
+    subgraph Inputs
+        T1_1 --> T2_1[Student Import XLSX/CSV]
+        T2_1 --> T2_2[Student Validation & Normalizer]
+        T1_1 --> T2_3[Room Grid Editor 1-3 seats]
+        T2_3 --> T2_4[Capacity & Blocked Bench Logic]
+    end
+
+    subgraph Core Engine
+        T2_2 --> T3_1[Capacity Pre-Check]
+        T2_4 --> T3_1
+        T3_1 --> T3_2[Deterministic CSP Allocator]
+        T3_2 --> T3_3[Independent Validator C1-C6]
+        T3_3 --> T3_4[Unassigned Reporter & Guidance]
+    end
+
+    subgraph Review & Control
+        T3_3 --> T4_1[Room Visual Review & Bench Details]
+        T4_1 --> T4_2[Seat Locator & Student Search]
+        T4_1 --> T4_3[Validated Manual Move/Swap]
+        T4_3 --> T4_4[Finalization & Immutable Snapshot]
+    end
+
+    subgraph Output Pack
+        T4_4 --> T5_1[Print Template Engine]
+        T5_1 --> T5_2[Output A: Attendance #1]
+        T5_1 --> T5_3[Output B: Attendance #2]
+        T5_1 --> T5_4[Output C: Seating Notice]
+        T5_1 --> T5_5[Output D: Daily Attendance]
+        T5_1 --> T5_6[Output E: Room Seating Plan]
+        T5_2 & T5_3 & T5_4 & T5_5 & T5_6 --> T5_7[Combined PDF Pack & CSV/XLSX]
+    end
+
+    subgraph Verification
+        T5_7 --> T6_1[Scale & Stress Testing 2000+]
+        T6_1 --> T6_2[Privacy & Data Sanitization]
+        T6_2 --> T6_3[E2E Acceptance Suite]
+    end
 ```
 
 ---
 
-## Phase 0: Project Setup & Architecture Foundations
+## Phase 0: Sample Inspection, Specifications & Architectural Decisions
 
-### Prerequisites / Dependencies
-- Node.js environment installed
-- Access to repository root `c:\AI Pro\seatingplan`
+> **PRD Reference:** Section 10 (Phase 0), Section 4.7, Section 13  
+> **Goal:** Inspect institutional sample sheets, formulate exact field mappings, and establish architectural ground rules before document implementation.  
+> **Exit Criteria:** Allocation semantics, bench orientation, and document field mappings are unambiguous.
 
-- [ ] **TASK-0.1: Initialize Vite React TypeScript Project**
-  - **Goal**: Scaffolding the React + TypeScript frontend using Vite.
-  - **Deliverables**: Configured `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, and `src/App.tsx`.
-  - **Dependencies**: None.
-  - **Acceptance Criteria**: Running `npm run dev` starts the Vite dev server with zero TypeScript errors.
+- [x] **TASK-0.1: Institutional Sample Sheet Analysis & Specification Matrix**
+  - **Goal**: Document the required fields, layouts, groupings, and signature areas for all five required institutional output sheets.
+  - **PRD Reference**: Section 4.7 (Outputs A through E), Section 10 (Phase 0).
+  - **Deliverables**: Specification mapping document in `src/export/templates/README.md`.
+  - **Inputs / Dependencies**: Uploaded institutional sample files (`Sample.xlsx` / PDF samples).
+  - **Acceptance Criteria**: Defined matrix detailing exact headers, column orders, handwriting signature spaces, and grouping rules for:
+    - Output A: Attendance Sheet #1 (hall-wise, register-number ordered, signature space)
+    - Output B: Attendance Sheet #2 (subject/room-wise attendance with additional sheet tracking)
+    - Output C: Seating Arrangement Sheet (high-contrast room & roll range notice board format)
+    - Output D: Daily Attendance Sheet (session/date/exam-level attendance summary)
+    - Output E: Room Seating Plan (visual bench layout diagram, seat orientation, position legend)
 
-- [ ] **TASK-0.2: Configure Styling Infrastructure & Design System**
-  - **Goal**: Setup Tailwind CSS with custom styling tokens (modern academic theme, glassmorphism, color palette).
-  - **Deliverables**: `tailwind.config.js`, `postcss.config.js`, and `src/index.css` containing base CSS variables and font imports.
-  - **Dependencies**: TASK-0.1
-  - **Acceptance Criteria**: Tailwind utility classes work across components; design tokens for background, surfaces, primary academic blue/indigo gradients are active.
+- [x] **TASK-0.2: Clarify Allocation Rules & Bench Orientation Semantics**
+  - **Goal**: Formulate exact mathematical and spatial definitions for bench occupancy and orientation.
+  - **PRD Reference**: Section 4.4, Section 10 (Phase 0 item 3 & 4).
+  - **Deliverables**: Rule specification comments and type documentation in `src/models/arrangement.ts`.
+  - **Inputs / Dependencies**: PRD Section 4.4 definitions.
+  - **Acceptance Criteria**:
+    - Bench occupancy is defined strictly as occupants of the *same bench* (1 to 3 ordered seats).
+    - Multi-person bench rule: for any pair of students on the same bench, conflict if `subjectCode` matches **OR** (`branch` matches **AND** `semester` matches).
+    - Left-to-right seat orientation convention established (seat index 0 = leftmost from candidate's view facing front board).
+    - Single candidate per register number per examination sitting established.
 
-- [ ] **TASK-0.3: Implement Routing & Navigation Infrastructure**
-  - **Goal**: Configure React Router DOM for wizard page routing and app navigation.
-  - **Deliverables**: `src/router.tsx` setting up routes for `/`, `/exam`, `/classrooms`, `/students`, `/rules`, `/generate`, `/review`, `/preview`, `/export`.
-  - **Dependencies**: TASK-0.1
-  - **Acceptance Criteria**: Navigating between routes renders respective screen containers without full page reloads.
+---
 
-- [ ] **TASK-0.4: Build Shared Design System UI Component Library**
-  - **Goal**: Implement reusable atomic UI components.
-  - **Deliverables**: Reusable UI components in `src/components/ui/`:
-    - `Button.tsx` (primary, secondary, danger, ghost variants with icons & loading states)
-    - `Card.tsx` (elevated container with header and content slots)
-    - `Input.tsx` (styled text input, number input, select with error states)
-    - `Modal.tsx` (accessible dialog overlay with escape key / backdrop close)
-    - `Badge.tsx` (status indicators: success green, warning yellow, error red, info blue)
-    - `Tooltip.tsx` (hover info popovers)
-  - **Dependencies**: TASK-0.2
-  - **Acceptance Criteria**: All UI components render consistently with active focus states, accessible ARIA attributes, and smooth hover transitions.
+## Phase 1: Foundation, Data Models & Examination Setup
 
-- [ ] **TASK-0.5: Build Wizard Navigation Shell & Progress Bar Component**
-  - **Goal**: Create header navigation and step-by-step progress indicator for the 7-step creation wizard.
+> **PRD Reference:** Section 4.1, Section 5, Section 10 (Phase 1)  
+> **Goal:** Build typed domain models adhering to PRD data schema, state management with snapshot versioning, and exam setup CRUD wizard.  
+> **Acceptance Criteria:** Exam can be created, edited, duplicated, and archived; duration and end-time validation works; state survives browser reload.
+
+- [x] **TASK-1.1: Core TypeScript Domain Models & Zod Schemas**
+  - **Goal**: Define domain models adhering strictly to PRD Section 5.
+  - **PRD Reference**: Section 5 (Suggested Data Model), Section 4.1, Section 4.4.
+  - **Deliverables**:
+    - `src/models/exam.ts` (`Exam`: id, name, date, session, startTime, endTime, institutionName, institutionLocation, examCode, documentCode, status: `draft` | `active` | `archived`).
+    - `src/models/student.ts` (`ExamCandidate`: id, examId, registerNumber [string, preserves leading zeros], name, branch, semester, subjectCode, sourceRow).
+    - `src/models/classroom.ts` (`Room`: id, name, rows, columns, studentsPerBench [1, 2, or 3], maxCapacity, roomOrder, active, blockedBenches: `BenchPosition[]`, blockedSeats: `SeatPosition[]`).
+    - `src/models/arrangement.ts` (`AllocationVersion`: id, examId, versionNumber, status: `draft` | `finalized` | `superseded`, algorithmVersion, seed, generatedAt, summary: `ValidationSummary`; `SeatAssignment`: allocationVersionId, candidateId, roomId, row, column, position).
+  - **Inputs / Dependencies**: PRD Section 5.
+  - **Acceptance Criteria**: All models compile with strict TypeScript; Zod schemas validate required fields, time format (`HH:mm`), and non-empty strings.
+
+- [x] **TASK-1.2: Zustand Global Store with Allocation Versioning & Persistence**
+  - **Goal**: Implement global state management supporting draft auto-save, multiple allocation versions, and finalization locking.
+  - **PRD Reference**: Section 4.6, Section 5 (`AllocationVersion`), Section 10 (Phase 1).
+  - **Deliverables**: `src/store/appStore.ts` and `src/storage/draftStorage.ts`.
+  - **Inputs / Dependencies**: TASK-1.1.
+  - **Acceptance Criteria**:
+    - Store manages active exam, candidate pool, rooms, allocation versions (`AllocationVersion[]`), active version ID, and UI navigation step.
+    - State updates auto-save to browser `localStorage` with debouncing (500ms).
+    - Supports creating new version branches when edits are made after generation.
+
+- [x] **TASK-1.3: Examination Setup Form & Time/Duration Validation**
+  - **Goal**: Create exam creation, editing, and duplication interface with time validation.
+  - **PRD Reference**: Section 4.1.
+  - **Deliverables**: `src/components/exam/ExamForm.tsx` and `src/pages/ExamDetailsScreen.tsx`.
+  - **Inputs / Dependencies**: TASK-1.1, TASK-1.2.
+  - **Acceptance Criteria**:
+    - Form captures: Exam Name, Date, Session (FN/AN), Start Time, End Time or Duration, Institution Name, Location, Document Code.
+    - Validates that End Time is after Start Time (warns if overnight unless explicitly toggled).
+    - Provides "Duplicate Exam" action to clone configuration for next session.
+    - Supports exam status toggle (`draft`, `active`, `archived`).
+
+- [x] **TASK-1.4: Wizard Shell Navigation & Progress Tracker**
+  - **Goal**: Build wizard header and workflow progress navigation bar.
+  - **PRD Reference**: Section 3 (Workflow), Section 6 (UI/Navigation).
   - **Deliverables**: `src/components/wizard/WizardHeader.tsx` and `src/components/wizard/ProgressIndicator.tsx`.
-  - **Dependencies**: TASK-0.3, TASK-0.4
-  - **Acceptance Criteria**: Wizard steps (1. Exam Details, 2. Classrooms, 3. Students, 4. Rules, 5. Generate, 6. Review, 7. Export) visually highlight current step, completed steps, and disable future invalid steps.
-
-- [ ] **TASK-0.6: Create Placeholder Views for All Application Screens**
-  - **Goal**: Wire up basic screen component structures to ensure clean route transitions.
-  - **Deliverables**: Placeholder page files under `src/pages/`:
-    - `Dashboard.tsx`
-    - `ExamDetailsScreen.tsx`
-    - `ClassroomsScreen.tsx`
-    - `StudentsScreen.tsx`
-    - `RulesScreen.tsx`
-    - `GenerateScreen.tsx`
-    - `ReviewScreen.tsx`
-    - `PreviewScreen.tsx`
-    - `ExportScreen.tsx`
-  - **Dependencies**: TASK-0.3, TASK-0.5
-  - **Acceptance Criteria**: Dashboard and wizard flow render with working step navigation and placeholder titles.
+  - **Inputs / Dependencies**: TASK-1.2.
+  - **Acceptance Criteria**: Displays sequential workflow: 1. Exam Setup -> 2. Students -> 3. Rooms -> 4. Rules & Readiness -> 5. Generate -> 6. Review & Finalize -> 7. Print Pack. Steps lock until prerequisites are met.
 
 ---
 
-## Phase 1: Domain Models & Core State Management
+## Phase 2: Student Import & Room Configuration
 
-### Prerequisites / Dependencies
-- Phase 0 completed
+> **PRD Reference:** Section 4.2, Section 4.3, Section 10 (Phase 2)  
+> **Goal:** XLSX/CSV candidate import with leading-zero preservation and duplicate handling; Room visual grid editor supporting 1 to 3 students per bench, blocked seats, and physical vs configured capacity.  
+> **Acceptance Criteria:** Duplicates and missing fields reported before committing; leading zeros preserved; room capacity cannot exceed physical seats; visual grid matches physical room geometry.
 
-- [x] **TASK-1.1: Define Exam Details Data Model & Zod Schema**
-  - **Goal**: Create TypeScript interface and runtime validation schema for examination metadata.
-  - **Deliverables**: `src/models/exam.ts` with `ExamDetails` type and `examDetailsSchema` Zod validation.
-  - **Fields**: `examName`, `examDate`, `session` ('FN'|'AN'), `startTime`, `endTime`, `academicYear`, `semester`, `institutionName`, `institutionLocation`, `examCode`, `documentCode`.
-  - **Dependencies**: TASK-0.1
-  - **Acceptance Criteria**: Zod schema parses valid exam objects and outputs detailed field-level validation errors for missing mandatory fields (`examName`, `examDate`, `session`).
+- [x] **TASK-2.1: Robust XLSX & CSV Candidate Parser Engine**
+  - **Goal**: Build file importer parsing `.xlsx` and `.csv` student spreadsheets while strictly preserving register numbers as raw strings.
+  - **PRD Reference**: Section 4.2.
+  - **Deliverables**: `src/import/csvImporter.ts` and `src/import/excelImporter.ts`.
+  - **Inputs / Dependencies**: SheetJS (`xlsx`) and `papaparse`.
+  - **Acceptance Criteria**:
+    - Preserves register number strings verbatim (e.g. `"0042"`, `"09CS01"` never converted to integer `42`).
+    - Extracts all candidate rows with raw column keys regardless of case or whitespace.
+    - Handles multi-sheet Excel workbooks with sheet selector if multiple sheets exist.
 
-- [x] **TASK-1.2: Define Classroom & Seat Data Models**
-  - **Goal**: Create TypeScript structures for classroom layouts, bench configurations, and seat positions.
-  - **Deliverables**: `src/models/classroom.ts`.
-  - **Types**: `SeatPosition`, `Classroom`, `SeatAvailabilityStatus`.
-  - **Dependencies**: TASK-0.1
-  - **Acceptance Criteria**: Models accurately represent grid layout (`rows`, `columns`, `studentsPerBench`), seat disabling maps (`disabledSeats: SeatPosition[]`), and calculated usable capacity.
-
-- [x] **TASK-1.3: Define Student & Branch Data Models**
-  - **Goal**: Create data structures for student records and branch aggregations.
-  - **Deliverables**: `src/models/student.ts`.
-  - **Types**: `Student`, `BranchInfo`, `StudentImportRaw`.
-  - **Dependencies**: TASK-0.1
-  - **Acceptance Criteria**: Correctly structures student attributes (`id`, `registerNumber`, `name`, `branch`, optional `section`/`department`) and branch summary metrics.
-
-- [x] **TASK-1.4: Define Seating Arrangement & Validation Data Models**
-  - **Goal**: Create structures for seat assignments, rules, conflict reports, and quality statistics.
-  - **Deliverables**: `src/models/arrangement.ts`.
-  - **Types**: `SeatingRules` (adjacency options), `AssignedSeat`, `SeatingArrangement`, `ConflictDetail`, `ValidationReport`.
-  - **Dependencies**: TASK-1.1, TASK-1.2, TASK-1.3
-  - **Acceptance Criteria**: Provides complete type safety for generated seating outputs, conflict definitions, and export-ready data shapes.
-
-- [x] **TASK-1.5: Setup Zustand Global App State Store & Persist Middleware**
-  - **Goal**: Build global state store to manage application state across all wizard screens.
-  - **Deliverables**: `src/store/appStore.ts`.
-  - **State Actions**: `setExamDetails`, `addClassroom`, `updateClassroom`, `deleteClassroom`, `setStudents`, `setRules`, `setArrangement`, `swapStudents`, `undo`, `redo`, `resetStore`.
-  - **Dependencies**: TASK-1.1, TASK-1.2, TASK-1.3, TASK-1.4
-  - **Acceptance Criteria**: State updates reliably trigger component re-renders, and Zustand store maintains complete serializability.
-
----
-
-## Phase 2: Exam Details Screen (Screen 2)
-
-### Prerequisites / Dependencies
-- Phase 1 completed
-
-- [x] **TASK-2.1: Build Exam Details Form Component**
-  - **Goal**: Construct the interactive form UI for entering examination metadata.
-  - **Deliverables**: `src/components/exam/ExamForm.tsx` in `src/pages/ExamDetailsScreen.tsx`.
-  - **Dependencies**: TASK-0.4, TASK-1.1, TASK-1.5
-  - **Acceptance Criteria**: Form displays input fields for Exam Name, Date Picker, Session Toggle (FN/AN), Institution Name (defaulted to 'ALBERTIAN INSTITUTE OF SCIENCE AND TECHNOLOGY'), Location ('KALAMASSERY'), Document Code ('AISAT/Form/QPM17/F4'), and optional fields.
-
-- [x] **TASK-2.2: Implement Exam Form Validation & Real-Time Error Messaging**
-  - **Goal**: Integrate Zod validation for instant field feedback on change/blur.
-  - **Deliverables**: Validation hook integration in `ExamForm.tsx`.
-  - **Dependencies**: TASK-2.1
-  - **Acceptance Criteria**: Required fields highlight in red with helper text if empty; Save & Continue button remains disabled or triggers inline errors if invalid.
-
-- [x] **TASK-2.3: Connect Exam Form to Zustand Store & Navigation Workflow**
-  - **Goal**: Persist entered exam details into global state and advance wizard to Classrooms step.
-  - **Deliverables**: Handler logic in `ExamDetailsScreen.tsx`.
-  - **Dependencies**: TASK-2.2
-  - **Acceptance Criteria**: Submitting valid exam details updates `store.exam`, enables Step 2 navigation, and navigates to `/classrooms`.
-
----
-
-## Phase 3: Classroom Configuration & Visual Grid (Screen 3)
-
-### Prerequisites / Dependencies
-- Phase 1 completed
-
-- [x] **TASK-3.1: Implement Classroom Usable Capacity Calculator Utility**
-  - **Goal**: Write pure function to calculate net classroom capacity considering disabled seats.
-  - **Deliverables**: `src/utils/capacityCalculator.ts`.
-  - **Formula**: `usableCapacity = (rows * columns * studentsPerBench) - disabledSeats.length`.
-  - **Dependencies**: TASK-1.2
-  - **Acceptance Criteria**: Correctly computes capacity for single and multi-student benches with zero or multiple disabled seats.
-
-- [x] **TASK-3.2: Build Classroom Form & Dimension Controls**
-  - **Goal**: Create form components for adding and editing classroom parameters.
-  - **Deliverables**: `src/components/classrooms/ClassroomFormModal.tsx`.
-  - **Fields**: Classroom/Hall Name (e.g. B301), Rows (e.g. 7), Columns (e.g. 9), Students Per Bench (1 or 2).
-  - **Dependencies**: TASK-0.4, TASK-1.2, TASK-3.1
-  - **Acceptance Criteria**: Changing row/column count dynamically updates the preview capacity value.
-
-- [x] **TASK-3.3: Build Interactive Visual Seat Grid Component**
-  - **Goal**: Render a visual representation of the classroom grid for disabling/enabling seat positions.
-  - **Deliverables**: `src/components/classrooms/SeatGrid.tsx`.
-  - **Dependencies**: TASK-3.2
-  - **Acceptance Criteria**: Displays grid rows x columns; bench grouping is visually clear; clicking a seat toggles between 'Available' (green/blue) and 'Disabled/Obstruction' (grayed out with cross hatch).
-
-- [x] **TASK-3.4: Build Classroom Management List View & Actions**
-  - **Goal**: Construct list view showing all configured classrooms, capacities, and management actions.
-  - **Deliverables**: `src/components/classrooms/ClassroomList.tsx` in `src/pages/ClassroomsScreen.tsx`.
-  - **Actions**: Add Room, Edit Room Grid, Duplicate Room, Delete Room, Toggle Room Enabled/Disabled.
-  - **Dependencies**: TASK-3.3, TASK-1.5
-  - **Acceptance Criteria**: Displays total active rooms and aggregated seating capacity; default rooms (B301, B306, B307, B407, A220, A305) can be loaded as presets.
-
----
-
-## Phase 4: Student Management & Import Wizards (Screen 4)
-
-### Prerequisites / Dependencies
-- Phase 1 completed
-
-- [x] **TASK-4.1: Build Manual Student Entry Table Component**
-  - **Goal**: Build editable table for manual student addition, modification, and deletion.
-  - **Deliverables**: `src/components/students/StudentTable.tsx`.
-  - **Columns**: Register Number, Student Name, Branch Code, Actions.
-  - **Dependencies**: TASK-0.4, TASK-1.3
-  - **Acceptance Criteria**: Allows inline row editing, single student deletion, and adding new student rows directly.
-
-- [x] **TASK-4.2: Implement CSV Student Importer Engine**
-  - **Goal**: Build CSV parser engine to process uploaded CSV student lists.
-  - **Deliverables**: `src/import/csvImporter.ts`.
-  - **Dependencies**: TASK-1.3
-  - **Acceptance Criteria**: Parses CSV strings/files, cleans whitespace, detects headers, and returns structured student array.
-
-- [x] **TASK-4.3: Implement Excel Student Importer Engine**
-  - **Goal**: Integrate SheetJS to parse `.xlsx` and `.xls` student files.
-  - **Deliverables**: `src/import/excelImporter.ts`.
-  - **Dependencies**: TASK-1.3
-  - **Acceptance Criteria**: Extracts worksheet rows into raw objects regardless of column header capitalization.
-
-- [x] **TASK-4.4: Build CSV/Excel Column Mapping Wizard Modal**
-  - **Goal**: Create modal UI to map arbitrary spreadsheet column headers to required schema fields.
+- [x] **TASK-2.2: Interactive Column Mapping Wizard**
+  - **Goal**: Allow coordinators to map uploaded spreadsheet headers to mandatory domain fields.
+  - **PRD Reference**: Section 4.2.
   - **Deliverables**: `src/components/students/ColumnMappingModal.tsx`.
-  - **Mappings**: Register Number -> Target Col, Student Name -> Target Col, Branch -> Target Col.
-  - **Dependencies**: TASK-4.2, TASK-4.3
-  - **Acceptance Criteria**: Pre-selects matching headers automatically (e.g. 'Register No', 'Name', 'Branch'); allows user manual mapping override.
+  - **Inputs / Dependencies**: TASK-2.1.
+  - **Acceptance Criteria**:
+    - Maps columns for: Register Number (mandatory), Candidate Name (mandatory), Branch (mandatory), Semester (mandatory), Subject Code (mandatory).
+    - Intelligent auto-detection matches common variations (e.g., `Reg No`, `RegisterNumber`, `Roll No`, `SubCode`, `CourseCode`).
+    - Disallows proceeding if any mandatory field is unmapped.
 
-- [x] **TASK-4.5: Implement Student Data Validator Engine**
-  - **Goal**: Build validator for missing values, malformed data, and duplicate register numbers.
+- [x] **TASK-2.3: Candidate Data Normalization, Duplicate Detection & Validation Engine**
+  - **Goal**: Validate uploaded candidate records for missing fields, malformed rows, and duplicate register numbers.
+  - **PRD Reference**: Section 4.2, Section 4.4 (C4, C6).
   - **Deliverables**: `src/import/studentValidator.ts`.
-  - **Checks**: Non-empty Register No, Name, Branch; Uniqueness of Register No across dataset.
-  - **Dependencies**: TASK-1.3
-  - **Acceptance Criteria**: Returns explicit error list with row numbers, highlighted duplicate records, and invalid count.
+  - **Inputs / Dependencies**: TASK-2.2.
+  - **Acceptance Criteria**:
+    - Trims and case-normalizes `branch`, `semester`, and `subjectCode` for internal comparisons while preserving original casing for display.
+    - Flags missing mandatory values with exact spreadsheet row numbers.
+    - Identifies duplicate register numbers across uploaded dataset and provides policy choices: Reject duplicates, Overwrite, or Keep first.
+    - Generates downloadable CSV error report containing invalid rows and error reasons.
 
-- [x] **TASK-4.6: Build Student Validation Summary & Error Resolution UI**
-  - **Goal**: Render import validation report with options to filter invalid rows or fix errors.
-  - **Deliverables**: `src/components/students/StudentValidationSummary.tsx` in `src/pages/StudentsScreen.tsx`.
-  - **Dependencies**: TASK-4.5
-  - **Acceptance Criteria**: Displays Total Imported, Valid Count, Duplicates Count, Missing Branch Count; provides "Delete Invalid Rows" quick action button.
+- [x] **TASK-2.4: Candidate Management Table & Import Review Screen**
+  - **Goal**: Interactive UI for reviewing imported candidates, editing records inline, and reviewing branch/semester distributions.
+  - **PRD Reference**: Section 4.2, Section 6.
+  - **Deliverables**:
+    - `src/components/students/StudentTable.tsx`
+    - `src/components/students/BranchSummaryCard.tsx`
+    - `src/pages/StudentsScreen.tsx`
+  - **Inputs / Dependencies**: TASK-2.3.
+  - **Acceptance Criteria**:
+    - Displays total candidate count, distribution by branch, semester, and subject code.
+    - Provides search/filter by register number, branch, semester, or subject code.
+    - Allows manual inline editing of candidate records and adding individual walk-in candidates.
+    - Allows "Replace All" or "Append to List" import modes.
 
-- [x] **TASK-4.7: Build Branch Statistics & Distribution Summary Card**
-  - **Goal**: Render summary breakdown of imported students grouped by branch code.
-  - **Deliverables**: `src/components/students/BranchSummaryCard.tsx`.
-  - **Dependencies**: TASK-1.3
-  - **Acceptance Criteria**: Visual chips show total count per branch (e.g. CS: 60, EC: 40, AI: 30, ME: 20) with distinct color coding per branch.
+- [x] **TASK-2.5: Room CRUD & Physical Bench Dimension Controls**
+  - **Goal**: Manage examination rooms/halls with row, column, students-per-bench, and room order attributes.
+  - **PRD Reference**: Section 4.3.
+  - **Deliverables**: `src/components/classrooms/ClassroomFormModal.tsx` and `src/pages/ClassroomsScreen.tsx`.
+  - **Inputs / Dependencies**: TASK-1.1, TASK-1.2.
+  - **Acceptance Criteria**:
+    - Allows setting Room Identifier/Name, Bench Rows (1-20), Bench Columns (1-20), Students per Bench (1, 2, or 3), Room Sequence/Order, and Active toggle.
+    - Enforces Configured Max Capacity <= Effective Physical Capacity.
+    - Supports presets for common institutional hall templates.
 
----
-
-## Phase 5: Capacity & Rule Validation (Screen 5 & Validator Engine)
-
-### Prerequisites / Dependencies
-- Phase 2, Phase 3, and Phase 4 completed
-
-- [x] **TASK-5.1: Build Seating Rules Configuration UI**
-  - **Goal**: Create configuration controls for seating rules and adjacency strictness.
-  - **Deliverables**: `src/components/rules/RulesForm.tsx` in `src/pages/RulesScreen.tsx`.
-  - **Options**: Same-bench separation (toggle), Horizontal adjacency (toggle), Vertical adjacency (toggle), Diagonal adjacency (toggle / strict mode).
-  - **Dependencies**: TASK-0.4, TASK-1.4
-  - **Acceptance Criteria**: Saves rule selections into global Zustand store (`store.rules`).
-
-- [x] **TASK-5.2: Implement Capacity Validator Engine**
-  - **Goal**: Build pre-generation validation check comparing active capacity against student count.
-  - **Deliverables**: `src/algorithms/capacityValidator.ts`.
-  - **Dependencies**: TASK-3.1, TASK-4.5
-  - **Acceptance Criteria**: Calculates `Total Valid Students`, `Total Available Seats`, `Capacity Difference`; returns `IS_SUFFICIENT` or `INSUFFICIENT` with exact shortage count.
-
-- [x] **TASK-5.3: Implement Hard Pre-Generation Gatekeeper Controls**
-  - **Goal**: Enforce strict pre-generation blocking rules to prevent invalid execution.
-  - **Deliverables**: Gatekeeper checker function in `src/pages/GenerateScreen.tsx`.
-  - **Blocking Conditions**: Missing Exam Date/Name, 0 Active Classrooms, 0 Students, Unresolved Student Duplicate Register Numbers, Insufficient Seating Capacity.
-  - **Dependencies**: TASK-5.2, TASK-1.1
-  - **Acceptance Criteria**: Displays clear warning cards for each blocking issue and disables the "Generate Seating Arrangement" button until all blocking errors are resolved.
-
-- [x] **TASK-5.4: Build Capacity & Readiness Summary Card**
-  - **Goal**: Render high-level status card before triggering seating generation.
-  - **Deliverables**: `src/components/generate/ReadinessCard.tsx`.
-  - **Dependencies**: TASK-5.3
-  - **Acceptance Criteria**: Shows green checkmarks for all passed pre-requisites and highlights non-blocking warnings (e.g., single branch only, high unused capacity percentage).
+- [x] **TASK-2.6: Interactive Visual Bench & Seat Grid Editor**
+  - **Goal**: Visual room layout grid enabling individual seat or entire bench blocking/unblocking.
+  - **PRD Reference**: Section 4.3.
+  - **Deliverables**: `src/components/classrooms/SeatGrid.tsx` and `src/utils/capacityCalculator.ts`.
+  - **Inputs / Dependencies**: TASK-2.5.
+  - **Acceptance Criteria**:
+    - Displays bench cells with 1, 2, or 3 distinct seat position slots per bench.
+    - Clicking a seat or bench toggles between Available and Blocked/Unavailable (visual hatch pattern).
+    - Dynamically computes and displays:
+      - `Theoretical Capacity = Rows × Columns × StudentsPerBench`
+      - `Effective Physical Capacity = Theoretical Capacity - Blocked Seats`
+      - `Configured Max Capacity`
+    - Changing room geometry after an allocation exists flags the allocation as invalid/needs regeneration.
 
 ---
 
-## Phase 6: Room Allocation & Seating Graph Engine (Core Algorithm - Part 1)
+## Phase 3: Allocation Engine & Independent Validator
 
-### Prerequisites / Dependencies
-- Phase 5 completed
+> **PRD Reference:** Section 4.4, Section 4.5, Section 10 (Phase 3), Section 13  
+> **Goal:** Deterministic, constraint-aware seating allocator enforcing hard constraints C1–C6; decoupled independent post-allocation validator; actionable infeasibility reporting.  
+> **Acceptance Criteria:** Every candidate assigned once or explicitly reported as unassigned; capacity and all bench constraints verified by validator; validator catches corrupted plans; identical input and seed produces identical layout.
 
-- [x] **TASK-6.1: Implement Room Allocation Strategy Engine**
-  - **Goal**: Distribute students across classrooms prior to seat assignment to prevent single-branch room concentration.
+- [x] **TASK-3.1: Capacity & Pre-Allocation Gatekeeper Engine**
+  - **Goal**: Execute pre-checks verifying candidate count against selected rooms' effective capacity before running allocator.
+  - **PRD Reference**: Section 4.5.
+  - **Deliverables**: `src/algorithms/capacityValidator.ts` and `src/components/generate/ReadinessCard.tsx`.
+  - **Inputs / Dependencies**: TASK-2.4, TASK-2.6.
+  - **Acceptance Criteria**:
+    - Verifies: `Total Eligible Candidates <= Sum of Selected Rooms' Effective Capacities`.
+    - If total candidates exceed capacity, blocks allocation with exact deficit count and suggests adding rooms or increasing room selections.
+    - Verifies zero uncorrected missing fields (C6) and zero unresolved duplicate register numbers.
+
+- [x] **TASK-3.2: Room-Fill & Candidate Ordering Strategy Engine**
+  - **Goal**: Implement strategies for distributing candidates across rooms prior to seat placement.
+  - **PRD Reference**: Section 4.5.
   - **Deliverables**: `src/algorithms/roomAllocation.ts`.
-  - **Dependencies**: TASK-1.2, TASK-1.3
-  - **Acceptance Criteria**: Distributes student branch proportions evenly across available classrooms (e.g. room B301 gets balanced mix of CS, EC, AI rather than 100% CS).
+  - **Inputs / Dependencies**: TASK-3.1.
+  - **Acceptance Criteria**:
+    - Supported Room Fill Strategies:
+      1. *Sequential Room Order*: fills rooms in configured room sequence order until capacity is reached.
+      2. *Balanced Distribution*: evenly distributes candidates across rooms proportionally to room capacities.
+    - Candidate Sorting Heuristic: sorts candidates by subject code and branch group size (largest conflicting cohort first) to maximize placement success.
 
-- [x] **TASK-6.2: Implement Seat Graph Builder Engine**
-  - **Goal**: Construct node-edge graph representation of active classroom seats based on configured adjacency rules.
-  - **Deliverables**: `src/algorithms/seatGraph.ts`.
-  - **Dependencies**: TASK-1.2, TASK-1.4
-  - **Acceptance Criteria**: Nodes represent usable seats; edges connect seats considered adjacent under current rule settings (horizontal, vertical, same-bench, optional diagonal). Inter-room seats are strictly disconnected.
+- [x] **TASK-3.3: Deterministic Constraint-Aware Allocation Engine (Backtracking / CSP)**
+  - **Goal**: Implement deterministic, rule-based placement engine satisfying hard constraints C1–C5.
+  - **PRD Reference**: Section 4.4, Section 4.5, Section 13 (No LLM for seating decisions).
+  - **Deliverables**: `src/algorithms/seatingGenerator.ts` and `src/utils/random.ts`.
+  - **Inputs / Dependencies**: TASK-3.2.
+  - **Hard Constraints Enforced**:
+    - **C1 Capacity**: Room assignment count <= room's effective and configured capacity.
+    - **C2 Subject**: No two occupants of the *same bench* share a subject code.
+    - **C3 Branch/Semester**: No two occupants of the *same bench* share both normalized branch and semester.
+    - **C4 Unique Assignment**: Each candidate appears at most once; all others reported unassigned.
+    - **C5 Valid Physical Seat**: Only non-blocked, available bench positions assigned.
+  - **Acceptance Criteria**:
+    - Pairwise verification for 2- and 3-student benches: compares every occupant pair `(Seat 1, Seat 2)`, `(Seat 1, Seat 3)`, `(Seat 2, Seat 3)`.
+    - Algorithm is deterministic: same inputs and random seed generate identical seat assignments.
+    - Generates progress callbacks with candidate count and room occupancy metrics without locking UI.
 
-- [x] **TASK-6.3: Implement Seeded Random & Deterministic Generator Utilities**
-  - **Goal**: Build seed-based PRNG utility for reproducible seating generation and randomized tie-breaking.
-  - **Deliverables**: `src/utils/random.ts`.
-  - **Dependencies**: None.
-  - **Acceptance Criteria**: Generating with the exact same seed produces identical seating outputs; changing the seed generates alternative valid candidate layouts.
+- [x] **TASK-3.4: Decoupled Independent Post-Allocation Validator**
+  - **Goal**: Build an independent validator module that evaluates any seating arrangement strictly from scratch.
+  - **PRD Reference**: Section 4.4, Section 4.5, Section 10 (Phase 3).
+  - **Deliverables**: `src/algorithms/independentValidator.ts`.
+  - **Inputs / Dependencies**: TASK-1.1, TASK-3.3.
+  - **Acceptance Criteria**:
+    - Evaluates complete allocation against constraints C1, C2, C3, C4, C5 without relying on allocator state.
+    - Returns structured validation report: `isValid: boolean`, `violations: ViolationDetail[]`, `summaryMetrics`.
+    - Unit tests include intentionally corrupted mock allocations (e.g. swapped same-subject students onto same bench, overloaded room capacity, duplicate candidate); validator must catch 100% of corruptions.
+    - UI displays success only if independent validator returns `isValid === true`.
 
-- [x] **TASK-6.4: Implement Initial Heuristic Seating Generator**
-  - **Goal**: Build core placement algorithm assigning students to seats using branch sorting and local penalty minimization.
-  - **Deliverables**: `src/algorithms/seatingGenerator.ts`.
-  - **Algorithm Steps**:
-    1. Group students by branch and sort branches by size (largest first).
-    2. Iterate through students; calculate local conflict penalty for each candidate seat.
-    3. Place student in seat with lowest penalty.
-    4. Resolve ties using local branch density and seeded PRNG.
-  - **Dependencies**: TASK-6.1, TASK-6.2, TASK-6.3
-  - **Acceptance Criteria**: Assigns 100% of students to valid seats without double-booking any seat or omitting any student.
-
----
-
-## Phase 7: Optimization, Repair & Quality Engine (Core Algorithm - Part 2)
-
-### Prerequisites / Dependencies
-- Phase 6 completed
-
-- [x] **TASK-7.1: Implement Conflict & Violation Detector Engine**
-  - **Goal**: Build validation function that evaluates an arrangement and identifies all same-branch adjacent seat pairs.
-  - **Deliverables**: `src/algorithms/validator.ts`.
-  - **Output**: Array of `ConflictDetail` (Seat A, Seat B, Student A, Student B, Branch, Room).
-  - **Dependencies**: TASK-6.2
-  - **Acceptance Criteria**: Accurately counts horizontal, vertical, same-bench, and diagonal same-branch violations.
-
-- [x] **TASK-7.2: Implement Swap-Based Optimization & Repair Engine**
-  - **Goal**: Build iterative local-search optimizer that performs student seat swaps to eliminate or minimize conflicts.
-  - **Deliverables**: `src/algorithms/optimizer.ts`.
-  - **Algorithm**:
-    - Identify seats with violations.
-    - Evaluate candidate swaps with other seats.
-    - Execute swap if net conflict count decreases.
-    - Repeat until zero conflicts achieved or max iterations reached.
-  - **Dependencies**: TASK-7.1
-  - **Acceptance Criteria**: Strictly non-increasing conflict count transitions; stops immediately when conflicts reach 0.
-
-- [x] **TASK-7.3: Implement Arrangement Quality Score Calculator**
-  - **Goal**: Calculate arrangement quality percentage and summary metrics.
-  - **Deliverables**: `src/utils/qualityCalculator.ts`.
-  - **Formula**: `score = Math.max(0, Math.round(100 * (1 - totalConflicts / maxPossibleConflicts)))`.
-  - **Dependencies**: TASK-7.1
-  - **Acceptance Criteria**: Outputs Quality Score percentage, total conflicts count, unassigned students count, and unused capacity count.
-
-- [x] **TASK-7.4: Implement Non-Blocking Worker / Async Generator Wrapper**
-  - **Goal**: Wrap seating generation and optimization in async chunks or Web Worker to keep UI responsive.
-  - **Deliverables**: `src/algorithms/generatorWorker.ts` / async execution wrapper.
-  - **Dependencies**: TASK-7.2, TASK-7.3
-  - **Acceptance Criteria**: Progress callback reports algorithm stages ("Distributing students...", "Optimizing branch separation...", "Checking conflicts...") without freezing browser animation thread.
+- [x] **TASK-3.5: Allocation Infeasibility & Unassigned Candidate Reporting**
+  - **Goal**: Accurately diagnose when an arrangement cannot be completed without violations and present actionable options.
+  - **PRD Reference**: Section 4.5.
+  - **Deliverables**: `src/algorithms/infeasibilityAnalyzer.ts` and `src/components/generate/InfeasibilityReportModal.tsx`.
+  - **Inputs / Dependencies**: TASK-3.3, TASK-3.4.
+  - **Acceptance Criteria**:
+    - Distinguishes capacity shortages from mathematical pigeonhole conflicts (e.g., one subject code exceeds 50% of available bench slots in 2-person bench rooms).
+    - Explicitly lists unassigned candidates with specific root cause (e.g., "No compatible bench companion found").
+    - Provides actionable resolution suggestions: add rooms, change bench occupancy, or inspect candidate distribution.
 
 ---
 
-## Phase 8: Seating Generation Screen & Validation Report (Screens 6 & 7)
+## Phase 4: Review, Swaps, Versioning & Finalization
 
-### Prerequisites / Dependencies
-- Phase 7 completed
+> **PRD Reference:** Section 4.6, Section 5, Section 10 (Phase 4)  
+> **Goal:** Interactive room visualizer, instant candidate/seat search, validator-guarded manual moves/swaps, version tracking, and immutable finalization locking.  
+> **Acceptance Criteria:** Invalid manual move rejected with clear explanation; valid move updates map and metrics; finalized plan is locked; post-finalization edit creates new version and warns of superseded print packs.
 
-- [x] **TASK-8.1: Build Generation Progress UI Screen**
-  - **Goal**: Render animated progress interface during seating arrangement computation.
-  - **Deliverables**: `src/components/generate/GenerationProgress.tsx` in `src/pages/GenerateScreen.tsx`.
-  - **Dependencies**: TASK-0.4, TASK-7.4
-  - **Acceptance Criteria**: Shows step-by-step loading state messages, progress spinner, and cancel button.
+- [x] **TASK-4.1: Room Visual Grid Reviewer & Bench Detail Inspector**
+  - **Goal**: Visual interactive room seating plan displaying assigned candidates with bench details.
+  - **PRD Reference**: Section 4.6.
+  - **Deliverables**: `src/components/review/RoomVisualReview.tsx` and `src/components/review/BenchDetailPopover.tsx`.
+  - **Inputs / Dependencies**: TASK-3.3, TASK-3.4.
+  - **Acceptance Criteria**:
+    - Renders room grid with row, column, and bench cell boundaries.
+    - Each occupied seat shows register number, branch tag, and subject code.
+    - Hovering or clicking a bench displays full candidate details: Register Number, Name, Branch, Semester, Subject Code for each occupant.
+    - Clearly marks empty seats and blocked positions.
 
-- [x] **TASK-8.2: Build Validation Quality Report Screen**
-  - **Goal**: Build comprehensive validation report view displaying generation results before seating plan preview.
-  - **Deliverables**: `src/pages/ReviewScreen.tsx`.
-  - **Status Indicators**:
-    - **Green Banner**: 0 conflicts — Arrangement valid.
-    - **Yellow Banner**: >0 conflicts — Review recommended (unavoidable conflicts detailed).
-    - **Red Banner**: Unassigned students or capacity failure.
-  - **Dependencies**: TASK-7.3, TASK-8.1
-  - **Acceptance Criteria**: Displays Quality Score badge, summary stats table, conflict list (if any), "Regenerate" button with seed control, and "Proceed to Preview" button.
+- [x] **TASK-4.2: Candidate & Seat Finder Search Bar**
+  - **Goal**: Rapid search utility to locate any candidate or bench instantly.
+  - **PRD Reference**: Section 4.6.
+  - **Deliverables**: `src/components/review/CandidateSearchBar.tsx`.
+  - **Inputs / Dependencies**: TASK-4.1.
+  - **Acceptance Criteria**:
+    - Type-ahead search by candidate Name or Register Number.
+    - Selecting candidate switches to their assigned room tab, scrolls to the bench, and applies an animated highlight to the seat.
 
----
+- [x] **TASK-4.3: Validator-Guarded Manual Move & Swap Engine**
+  - **Goal**: Enable coordinator to manually move a student to an empty seat or swap two students, enforcing hard constraints.
+  - **PRD Reference**: Section 4.5, Section 4.6.
+  - **Deliverables**: `src/components/review/ManualSwapModal.tsx` and `src/algorithms/swapValidator.ts`.
+  - **Inputs / Dependencies**: TASK-3.4, TASK-4.1.
+  - **Acceptance Criteria**:
+    - Selecting Seat A and Seat B opens Swap Preview dialog.
+    - Runs `independentValidator` against the proposed swap.
+    - If swap introduces C1, C2, or C3 violations, the "Confirm Swap" button is blocked with explicit error message (e.g., "Cannot swap: Register No 21CS04 shares subject code CS301 with bench mate 21CS12").
+    - Confirmed valid swap updates active allocation and recalculates statistics.
 
-## Phase 9: Seating Plan Visual Preview & Student Search (Screen 8)
-
-### Prerequisites / Dependencies
-- Phase 8 completed
-
-- [x] **TASK-9.1: Build Classroom Navigation Header/Tabs Component**
-  - **Goal**: Build tab bar and dropdown navigation for switching between classroom seating views.
-  - **Deliverables**: `src/components/preview/ClassroomTabs.tsx`.
-  - **Dependencies**: TASK-0.4, TASK-1.2
-  - **Acceptance Criteria**: Displays tabs for each classroom (B301, B306, B307, B407, A220, A305); highlights selected classroom; displays per-room student/branch breakdown.
-
-- [x] **TASK-9.2: Build Visual Classroom Seating Grid Renderer**
-  - **Goal**: Build interactive visual room grid displaying student assignments matching physical room layout.
-  - **Deliverables**: `src/components/preview/ClassroomGrid.tsx` in `src/pages/PreviewScreen.tsx`.
-  - **Details Per Cell**: Register Number, Student Name (truncated/tooltip), Branch Badge, Conflict highlight (if part of violation).
-  - **Dependencies**: TASK-9.1, TASK-1.4
-  - **Acceptance Criteria**: Renders front board indicator, row & column headers, bench groupings, assigned student cards, and disabled seat indicators.
-
-- [x] **TASK-9.3: Build Student Detail Hover & Drawer Panel**
-  - **Goal**: Provide detailed student assignment popover when clicking/hovering a seat cell.
-  - **Deliverables**: `src/components/preview/StudentDetailPanel.tsx`.
-  - **Dependencies**: TASK-9.2
-  - **Acceptance Criteria**: Displays full Student Name, Register Number, Branch, Classroom Name, Row Number, Column Number, Seat Index, and any adjacent neighbor details.
-
-- [x] **TASK-9.4: Implement Live Student Search Engine & Target Auto-Focus**
-  - **Goal**: Build search input allowing Instant lookup by Register Number or Student Name.
-  - **Deliverables**: `src/components/preview/StudentSearch.tsx`.
-  - **Dependencies**: TASK-9.2
-  - **Acceptance Criteria**: Typing register number or name auto-completes matches; selecting a student automatically switches to their assigned classroom tab and scrolls/highlights their seat cell.
-
-- [x] **TASK-9.5: Implement Quick Classroom Jump Search**
-  - **Goal**: Add quick search filter for navigating rapidly to any room.
-  - **Deliverables**: Room search filter in `ClassroomTabs.tsx`.
-  - **Dependencies**: TASK-9.1
-  - **Acceptance Criteria**: Allows typing room name to filter tabs instantly.
+- [x] **TASK-4.4: Allocation Versioning, Finalization Lock & Superseded State Engine**
+  - **Goal**: Manage immutable allocation version snapshots and protect against stale print packs.
+  - **PRD Reference**: Section 4.6, Section 5 (`AllocationVersion`).
+  - **Deliverables**: `src/store/versionManager.ts` in `src/pages/ReviewScreen.tsx`.
+  - **Inputs / Dependencies**: TASK-1.2, TASK-4.3.
+  - **Acceptance Criteria**:
+    - "Finalize Allocation" action locks the current version (marks status `finalized`, timestamps snapshot, creates immutable record).
+    - Attempting any manual move or room change on a finalized allocation prompts: "Finalized allocation is locked. Creating a new version (v2) will mark v1 as superseded."
+    - Superseded versions display a prominent yellow/red banner: "Warning: This allocation has been superseded by Version X."
 
 ---
 
-## Phase 10: Interactive Manual Editing & Undo/Redo Engine
+## Phase 5: Five Print Templates & Print Pack Generator
 
-### Prerequisites / Dependencies
-- Phase 9 completed
+> **PRD Reference:** Section 4.7 (Outputs A through E), Section 10 (Phase 5)  
+> **Goal:** Reusable print template engine rendering the five institutional sheets with exact fields, handwriting spaces, crisp notice typography, combined PDF print pack, and CSV/XLSX export.  
+> **Acceptance Criteria:** Outputs derive strictly from same finalized allocation; table headers repeat; no clipped text or blank pages; seating notice register numbers large and high-contrast; room plan has orientation legend.
 
-- [ ] **TASK-10.1: Build Interactive Seat Selection State Engine**
-  - **Goal**: Support selecting seat cells for manual seat swap operations.
-  - **Deliverables**: Selection state handler in `PreviewScreen.tsx`.
-  - **Dependencies**: TASK-9.2
-  - **Acceptance Criteria**: Clicking Seat A highlights it as active source; clicking Seat B triggers swap confirmation bar.
+- [x] **TASK-5.1: Reusable Print Template System & Layout Framework**
+  - **Goal**: Build modular HTML/CSS print template rendering framework supporting A4 Portrait and Landscape modes.
+  - **PRD Reference**: Section 4.7.
+  - **Deliverables**: `src/export/templates/PrintContainer.tsx` and `src/styles/printEngine.css`.
+  - **Inputs / Dependencies**: TASK-4.4.
+  - **Acceptance Criteria**:
+    - Enforces standard A4 page dimensions, margins (12mm/15mm), page-break rules (`page-break-after: always`, `page-break-inside: avoid`).
+    - Standard institutional header component: Institution Name, Department/Office, Examination Title, Date, Session, Document Code.
+    - Page numbering format ("Page X of Y") and repeated table headers across pages (`thead { display: table-header-group; }`).
+    - Crisp high-contrast black-and-white print output without relying on color.
 
-- [ ] **TASK-10.2: Build Manual Student Swap UI Modal & Execution Handler**
-  - **Goal**: Construct UI dialog to execute and confirm seat swaps between two students or a student and an empty seat.
-  - **Deliverables**: `src/components/preview/SwapModal.tsx`.
-  - **Dependencies**: TASK-10.1, TASK-1.5
-  - **Acceptance Criteria**: Displays "Swap Student A ↔ Student B", predicts conflict count impact before confirming, and updates arrangement state upon execution.
+- [x] **TASK-5.2: Output A — Attendance Sheet #1 Template**
+  - **Goal**: Implement printable Attendance Sheet #1 template.
+  - **PRD Reference**: Section 4.7 (Output A).
+  - **Deliverables**: `src/export/templates/AttendanceSheet1.tsx`.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - Form layout: Room No, Date, Session, Candidate List sorted by room/bench/register number.
+    - Columns: Sl. No., Register Number, Candidate Name, Branch, Subject Code, Answer Book No., Student Signature.
+    - Generous handwriting and signature space (minimum 28px row height).
+    - Summary footer for Invigilator Name, Number of Candidates Present/Absent, and Invigilator Signature.
 
-- [ ] **TASK-10.3: Implement Dynamic Real-Time Re-Validation Engine**
-  - **Goal**: Instantly re-evaluate validation and conflict counts after any manual modification.
-  - **Deliverables**: Trigger call to `src/algorithms/validator.ts` post-swap.
-  - **Dependencies**: TASK-10.2, TASK-7.1
-  - **Acceptance Criteria**: Manual edits immediately update conflict banner, quality score, and validation status without requiring full re-generation.
+- [x] **TASK-5.3: Output B — Attendance Sheet #2 Template**
+  - **Goal**: Implement printable Attendance Sheet #2 template.
+  - **PRD Reference**: Section 4.7 (Output B).
+  - **Deliverables**: `src/export/templates/AttendanceSheet2.tsx`.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - Implemented as distinct template matching institutional sample #2 layout.
+    - Columns for Main Answer Sheet Number, Additional Sheet Serial Numbers, Total Sheets Issued, and Student Signature.
+    - Room-wise grouping with separate page breaks between rooms.
 
-- [ ] **TASK-10.4: Implement Undo / Redo History Stack Manager**
-  - **Goal**: Build arrangement history stack enabling undo and redo for manual swaps.
-  - **Deliverables**: `src/store/historyManager.ts` integrated into Zustand store.
-  - **Dependencies**: TASK-10.3
-  - **Acceptance Criteria**: "Undo" reverts last manual swap; "Redo" re-applies it; history stack tracks past actions cleanly.
+- [x] **TASK-5.4: Output C — Seating Arrangement Sheet (Notice Board Format)**
+  - **Goal**: Implement high-contrast seating arrangement summary sheet designed for public notice boards.
+  - **PRD Reference**: Section 4.7 (Output C).
+  - **Deliverables**: `src/export/templates/SeatingNoticeSheet.tsx`.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - Large, prominent, bold register number typography (minimum 14pt-18pt) legible from distance.
+    - Groups candidates by Room, Branch, and Semester.
+    - Formats register numbers into continuous ranges (e.g. `21CS001 to 21CS025`) and clean comma-separated lists for gaps.
+    - Does not shrink text to fit single page; cleanly paginates across multi-page notice sheets.
+    - Omits unnecessary personal data to preserve privacy on public notice boards.
 
----
+- [x] **TASK-5.5: Output D — Daily Attendance Sheet Template**
+  - **Goal**: Implement Daily Attendance Sheet template.
+  - **PRD Reference**: Section 4.7 (Output D).
+  - **Deliverables**: `src/export/templates/DailyAttendanceSheet.tsx`.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - Daily exam-wide/hall-wide attendance record format.
+    - Columns: Room Number, Course/Subject Code, Branch, Registered Count, Present Count, Absent Count, Absentee Register Numbers list.
+    - Blank signature blocks for Chief Superintendent / Exam Cell In-Charge.
 
-## Phase 11: Seating Summary Sheet Generator (Reference Workbook Sheet 1)
+- [x] **TASK-5.6: Output E — Room Seating Plan / Notice-Board Layout Diagram**
+  - **Goal**: Implement visual room seating grid diagram for classroom door notice boards.
+  - **PRD Reference**: Section 4.7 (Output E).
+  - **Deliverables**: `src/export/templates/RoomSeatingPlanSheet.tsx`.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - Visual spatial diagram matching room bench rows and columns.
+    - Each bench cell clearly displays Bench Row/Column coordinate, Seat Positions (1 to 3), and occupant Register Numbers.
+    - Clear front-board / teacher's desk orientation indicator.
+    - Orientation legend clearly printed: "Seat 1: Leftmost from student facing front board; Seat 2: Rightmost" (or 3-seat convention).
+    - Blocked seats / empty seats clearly marked.
+    - Includes a structured tabular fallback view on the sheet.
 
-### Prerequisites / Dependencies
-- Phase 9 completed
-
-- [ ] **TASK-11.1: Implement Register Number Range Formatter Utility**
-  - **Goal**: Write utility to format list of register numbers into compact continuous ranges or comma-separated lists.
-  - **Deliverables**: `src/utils/rangeFormatter.ts`.
-  - **Examples**:
-    - `['CS01', 'CS02', 'CS03', 'CS04', 'CS05']` -> `"1 to 5"` (or `"CS01 to CS05"`)
-    - Non-contiguous: `['CS01', 'CS02', 'CS05', 'CS08', 'CS09']` -> `"1 to 2, 5, 8 to 9"`
-  - **Dependencies**: TASK-1.3
-  - **Acceptance Criteria**: Correctly handles contiguous sequences, single isolated numbers, and alpha-numeric registration strings without misrepresenting non-contiguous gaps.
-
-- [ ] **TASK-11.2: Implement Seating Summary Matrix Generator Engine**
-  - **Goal**: Construct summary table data matching the layout of Sheet 1 (`Seating Arrangement`) from `Sample.xlsx`.
-  - **Deliverables**: `src/algorithms/summaryGenerator.ts`.
-  - **Table Columns**: Date and Time | Class Room No. | Branch | Roll No. Range | No. of Students | Total Room Count.
-  - **Dependencies**: TASK-11.1, TASK-1.4
-  - **Acceptance Criteria**: Groups room allocations by classroom and branch; accurately computes roll number ranges and sub-totals.
-
-- [ ] **TASK-11.3: Build Visual Seating Summary Table Component**
-  - **Goal**: Render visual UI preview of the Seating Summary table.
-  - **Deliverables**: `src/components/preview/SummaryView.tsx`.
-  - **Dependencies**: TASK-11.2
-  - **Acceptance Criteria**: Displays clean summary table with merged room cells, branch counts, formatted roll ranges, and grand total.
-
----
-
-## Phase 12: Excel Export Engine (3 Worksheets: `Seating Arrangement`, `rooms`, `Attendance sheet`)
-
-### Prerequisites / Dependencies
-- Phase 11 completed
-
-- [ ] **TASK-12.1: Setup Excel Export Builder Infrastructure with SheetJS**
-  - **Goal**: Create modular Excel exporter engine using SheetJS (`xlsx`).
-  - **Deliverables**: `src/export/excelExporter.ts` and `src/export/excelFormatter.ts`.
-  - **Dependencies**: TASK-1.4, TASK-11.2
-  - **Acceptance Criteria**: Generates multi-sheet workbook binary buffer ready for browser download.
-
-- [ ] **TASK-12.2: Implement Sheet 1 Generator — `Seating Arrangement`**
-  - **Goal**: Build worksheet generator for `Seating Arrangement` summary table matching `Sample.xlsx`.
-  - **Deliverables**: `generateSummarySheet()` in `excelExporter.ts`.
-  - **Dependencies**: TASK-12.1, TASK-11.2
-  - **Acceptance Criteria**: Output worksheet includes institution header, date/session, merged room cells, roll ranges, count columns, and totals.
-
-- [ ] **TASK-12.3: Implement Sheet 2 Generator — `rooms`**
-  - **Goal**: Build worksheet generator for `rooms` containing classroom-wise visual seating grids.
-  - **Deliverables**: `generateRoomsSheet()` in `excelExporter.ts`.
-  - **Layout**: Classroom header blocks, Row/Column coordinate headers, centered register numbers inside bordered grid cells, with separated classroom blocks.
-  - **Dependencies**: TASK-12.1, TASK-9.2
-  - **Acceptance Criteria**: Visually maps classroom grids into Excel cells; accurately places register numbers in correct row/column offsets.
-
-- [ ] **TASK-12.4: Implement Sheet 3 Generator — `Attendance sheet`**
-  - **Goal**: Build worksheet generator for classroom-wise attendance sheets matching `Sample.xlsx`.
-  - **Deliverables**: `generateAttendanceSheet()` in `excelExporter.ts`.
-  - **Columns**: Hall No | Date | Sl. No. | Roll No. | Student Name | Main Sheets | Additional Sheets | Total Additional | Signature.
-  - **Dependencies**: TASK-12.1
-  - **Acceptance Criteria**: Creates distinct attendance block per classroom with blank signature rows and student roll/name list sorted by register number.
-
-- [ ] **TASK-12.5: Apply Excel Formatting, Cell Styles, Borders & Column Widths**
-  - **Goal**: Apply formatting metadata (column widths, row heights, text alignment, cell borders, title merges).
-  - **Deliverables**: Formatting configuration functions in `excelFormatter.ts`.
-  - **Dependencies**: TASK-12.2, TASK-12.3, TASK-12.4
-  - **Acceptance Criteria**: Excel export opens in Microsoft Excel / LibreOffice without clipped text, misaligned columns, or broken grid layouts.
-
-- [ ] **TASK-12.6: Implement Download Excel File Trigger Functionality**
-  - **Goal**: Attach export handler to "Download Excel" button to trigger file saving.
-  - **Deliverables**: Download handler in `src/pages/ExportScreen.tsx`.
-  - **Filename Format**: `Seating_Arrangement_[ExamName]_[Date].xlsx`.
-  - **Dependencies**: TASK-12.5
-  - **Acceptance Criteria**: Clicking button generates and downloads valid `.xlsx` file directly in browser.
+- [x] **TASK-5.7: Combined PDF Print Pack & Allocation CSV/XLSX Export Engine**
+  - **Goal**: Generate combined PDF document containing all 5 sheets and raw allocation data spreadsheet.
+  - **PRD Reference**: Section 4.7 (Combined print pack & CSV/XLSX).
+  - **Deliverables**: `src/export/pdfPackGenerator.ts` and `src/export/csvAllocationExporter.ts`.
+  - **Inputs / Dependencies**: TASK-5.2 through TASK-5.6.
+  - **Acceptance Criteria**:
+    - "Download Combined Print Pack (PDF)" creates a single compiled PDF file containing:
+      1. Seating Arrangement Notice Sheets
+      2. Room Seating Plans
+      3. Attendance Sheets #1
+      4. Attendance Sheets #2
+      5. Daily Attendance Sheets
+    - Includes native browser `window.print()` trigger with print preview CSS.
+    - "Export Allocation Data" produces CSV and XLSX files with columns: `Exam Name`, `Date`, `Session`, `Room`, `Row`, `Column`, `Position`, `Register Number`, `Name`, `Branch`, `Semester`, `Subject Code`.
 
 ---
 
-## Phase 13: PDF Export & Print Engine
+## Phase 6: End-to-End Hardening, Security & Deployment
 
-### Prerequisites / Dependencies
-- Phase 11 completed
+> **PRD Reference:** Section 7, Section 8, Section 10 (Phase 6), Section 11, Section 12  
+> **Goal:** High-volume scalability testing, candidate data privacy protections, accessibility, and end-to-end integration verification.  
+> **Acceptance Criteria:** Full workflow works end-to-end; 2,000+ candidate dataset processed smoothly; unauthorized data leakage prevented; print PDFs verified on multiple screen sizes and printers.
 
-- [ ] **TASK-13.1: Setup PDF Generation Engine & Print Stylesheets**
-  - **Goal**: Configure PDF exporter library (jsPDF / HTML-to-PDF / browser print engine) and CSS `@media print` rules.
-  - **Deliverables**: `src/export/pdfExporter.ts` and `src/styles/print.css`.
-  - **Dependencies**: TASK-9.2, TASK-11.3
-  - **Acceptance Criteria**: Supports clean A4 page sizing in both Portrait and Landscape orientations.
+- [x] **TASK-6.1: High-Volume Scale & Performance Benchmark Test (2,000+ Candidates)**
+  - **Goal**: Test system responsiveness and allocator performance with 2,000 synthetic candidate records.
+  - **PRD Reference**: Section 8 (Performance target: 2,000 rows), Section 11.
+  - **Deliverables**: `tests/scaleBenchmark.test.ts` and synthetic dataset generator in `src/utils/mockDataGenerator.ts`.
+  - **Inputs / Dependencies**: TASK-3.3, TASK-5.7.
+  - **Acceptance Criteria**:
+    - Importing 2,000 rows executes in < 2 seconds.
+    - Allocator generates valid arrangement across 15+ rooms with deterministic seed within configurable timeout (default 10s).
+    - Memory usage remains stable without crashing browser tab.
 
-- [ ] **TASK-13.2: Implement PDF Section 1 — Seating Summary Page**
-  - **Goal**: Render Page 1 of PDF containing institution header, exam metadata, and Seating Arrangement Summary table.
-  - **Deliverables**: Summary page renderer in `pdfExporter.ts`.
-  - **Dependencies**: TASK-13.1, TASK-11.2
-  - **Acceptance Criteria**: Fits summary table neatly on standard A4 page with crisp text headers.
+- [x] **TASK-6.2: Comprehensive Constraint & Edge Case Verification Suite**
+  - **Goal**: Execute automated unit and integration tests covering all PRD edge cases.
+  - **PRD Reference**: Section 7 (Edge cases), Section 11 (Test plan).
+  - **Deliverables**: `tests/prdEdgeCases.test.ts`.
+  - **Inputs / Dependencies**: TASK-3.4, TASK-4.3.
+  - **Edge Cases Tested**:
+    - Single-branch candidate pool in multi-student bench rooms (verifies failure / unassigned reporting, no silent C3 violations).
+    - Concentrated subject codes (>50% same subject).
+    - Leading zeros in register numbers (e.g. `00123`) maintained through import, review, and export.
+    - All-blocked seats or insufficient capacity scenarios.
+    - Odd candidate numbers with partially occupied final bench.
+    - Candidate with missing semester/subject code (rejected at pre-check).
+    - Long candidate names (50+ chars) in print templates without text clipping.
+  - **Acceptance Criteria**: 100% of edge case test assertions pass.
 
-- [ ] **TASK-13.3: Implement PDF Section 2 — Classroom Seating Grid Pages**
-  - **Goal**: Render 1 classroom seating plan per PDF page.
-  - **Deliverables**: Classroom grid page renderer in `pdfExporter.ts`.
-  - **Layout**: Header (Institution, Exam, Date, Session, Room No), Visual Grid with clear cell borders and readable register numbers.
-  - **Dependencies**: TASK-13.1, TASK-9.2
-  - **Acceptance Criteria**: Automatic page break between classrooms; seating grid fits within page margins without truncation.
+- [x] **TASK-6.3: Candidate Data Privacy, Upload Sanitization & Security Hardening**
+  - **Goal**: Protect personal student data and sanitize spreadsheet uploads.
+  - **PRD Reference**: Section 8 (Privacy/security).
+  - **Deliverables**: `src/utils/securitySanitizer.ts`.
+  - **Inputs / Dependencies**: TASK-2.1.
+  - **Acceptance Criteria**:
+    - Disallows spreadsheet macro execution (pure data extraction only).
+    - Strips formula injection vulnerabilities (e.g. cells starting with `=`, `+`, `-`, `@`).
+    - Avoids logging full personal student records in client console.
+    - Provides explicit "Clear All Student Data" privacy action in settings.
 
-- [ ] **TASK-13.4: Implement PDF Section 3 — Attendance Sheet Pages**
-  - **Goal**: Render printable attendance sheets for each classroom at the end of the PDF document.
-  - **Deliverables**: Attendance sheet renderer in `pdfExporter.ts`.
-  - **Dependencies**: TASK-13.1, TASK-12.4
-  - **Acceptance Criteria**: Renders signature tables with clear row lines and adequate spacing for invigilator signing.
+- [x] **TASK-6.4: Accessibility & Print Calibration Verification**
+  - **Goal**: Ensure keyboard operability, contrast compliance, and physical printer alignment.
+  - **PRD Reference**: Section 8 (Accessibility), Section 4.7.
+  - **Deliverables**: `tests/accessibilityAudit.md` and print styles adjustments.
+  - **Inputs / Dependencies**: TASK-5.1.
+  - **Acceptance Criteria**:
+    - All interactive wizard forms and modals are keyboard navigable with focus rings.
+    - Screen reader ARIA labels on visual bench grid cells and seat status indicators.
+    - Print output tested on physical printer / standard PDF viewer: margins align, headers repeat, barcode/text razor-sharp.
 
-- [ ] **TASK-13.5: Implement PDF Download & Browser Print Triggers**
-  - **Goal**: Wire up "Download PDF" and "Print Seating Plan" buttons on Export Screen.
-  - **Deliverables**: Handlers in `src/pages/ExportScreen.tsx`.
-  - **Dependencies**: TASK-13.2, TASK-13.3, TASK-13.4
-  - **Acceptance Criteria**: Downloads single formatted PDF file (`Seating_Arrangement_[ExamName].pdf`) or opens native browser print preview dialog.
+- [x] **TASK-6.5: User Operational Manual & Deployment Packaging**
+  - **Goal**: Produce user documentation, troubleshooting guide, and production build verification.
+  - **PRD Reference**: Section 10 (Phase 6).
+  - **Deliverables**: `USER_GUIDE.md` and production build validation.
+  - **Inputs / Dependencies**: TASK-6.1 through TASK-6.4.
+  - **Acceptance Criteria**:
+    - `npm run build` succeeds with zero TypeScript errors or linter warnings.
+    - `npm test` runs all unit, integration, and allocator suites cleanly.
+    - Step-by-step documentation for exam coordinators on importing, seating generation, manual swap rules, and print pack generation.
 
 ---
 
-## Phase 14: Draft Persistence & Project File Management
+## Phase 7: Optional Enhancements (Future Scope)
 
-### Prerequisites / Dependencies
-- Phase 1 completed
+> **PRD Reference:** Section 10 (Phase 7), Section 4.4  
+> **Goal:** Post-MVP institutional capabilities to be scheduled after Phase 6 sign-off.
 
-- [ ] **TASK-14.1: Implement LocalStorage Auto-Save & Debounced Persistence Engine**
-  - **Goal**: Auto-save active wizard state to browser `localStorage` to prevent data loss on reload.
-  - **Deliverables**: `src/storage/draftStorage.ts`.
-  - **Dependencies**: TASK-1.5
-  - **Acceptance Criteria**: State updates (Exam, Classrooms, Students, Rules, Arrangement) auto-save within 500ms debounce; shows "Last saved: HH:MM AM/PM" indicator in UI.
+- [x] **TASK-7.1: Neighboring-Bench & Diagonal Adjacency Constraint Engine**
+  - **Goal**: Prohibit same-subject or same-branch students on neighboring benches across horizontal, vertical, and diagonal spatial offsets.
+  - **PRD Reference**: Section 4.4, Section 10 (Phase 7).
+  - **Deliverables**: Extended `src/models/arrangement.ts`, `src/algorithms/seatGraph.ts`, `src/algorithms/seatingGenerator.ts`, `src/algorithms/independentValidator.ts` (`C7_ADJACENT_BENCH_CONFLICT`), and `src/components/rules/RulesForm.tsx`.
+  - **Acceptance Criteria**:
+    - Allocator checks bench-level connectivity (`addBenchNeighbors`), preventing same-branch or same-subject placement on adjacent desks.
+    - Independent validator reports `C7_ADJACENT_BENCH_CONFLICT` violations.
+    - Verified by automated tests in `tests/phase7Adjacency.test.ts`.
 
-- [ ] **TASK-14.2: Build Draft Recovery & Clear Controls on Dashboard**
-  - **Goal**: Create Dashboard options to resume existing saved draft or start fresh.
-  - **Deliverables**: `src/pages/Dashboard.tsx`.
-  - **Actions**: "Create New Arrangement", "Continue Saved Draft", "Clear Saved Draft".
-  - **Dependencies**: TASK-14.1
-  - **Acceptance Criteria**: "Continue Saved Draft" loads persisted state and navigates to last active wizard step; "Clear Draft" resets state completely.
+- [x] **TASK-7.2: Multi-User Authentication & Role-Based Access Control**
+  - **Goal**: Implement institutional role permissions (Admin, Coordinator, Invigilator) with persistent session management.
+  - **PRD Reference**: Section 8 (Security & Multi-user), Section 10 (Phase 7).
+  - **Deliverables**: `src/models/user.ts`, `src/store/authStore.ts`, and `src/components/auth/UserRoleSwitcher.tsx` mounted in navigation bar.
+  - **Acceptance Criteria**:
+    - Granular permission matrix (`MANAGE_SETTINGS`, `GENERATE_SEATING`, `FINALIZE_VERSION`, `PRINT_DOCUMENTS`, `MARK_ATTENDANCE`).
+    - Seamless role switcher for testing and production deployment with safe local fallback.
+    - Verified by automated tests in `tests/phase7AuthRbac.test.ts`.
 
-- [ ] **TASK-14.3: Implement Export Project JSON & Import Project JSON System**
-  - **Goal**: Allow saving and loading complete project state files (`.json`).
-  - **Deliverables**: `src/storage/projectFile.ts`.
-  - **Dependencies**: TASK-1.5
-  - **Acceptance Criteria**: User can download `exam-seating-project.json` and upload it later on any browser to restore state completely.
+- [x] **TASK-7.3: Timetable Clash Detection & Multi-Sitting Exam Rostering**
+  - **Goal**: Detect candidate conflicts across multi-paper exam timetables and roster valid multi-sitting days.
+  - **PRD Reference**: Section 4.4, Section 7 (Edge cases).
+  - **Deliverables**: `src/algorithms/timetableClashDetector.ts` and `src/components/exam/TimetableClashBanner.tsx` mounted in Exam Setup.
+  - **Acceptance Criteria**:
+    - Flags critical same-session paper clashes with actionable resolution advice.
+    - Accurately identifies valid multiple sitting sessions (FN + AN) on identical exam dates.
+    - Verified by automated tests in `tests/phase7TimetableClash.test.ts`.
+
+- [x] **TASK-7.4: Invigilator Duty Rostering Engine**
+  - **Goal**: Automated invigilator faculty assignment based on room candidate counts, faculty seniority weighting, and department conflict avoidance.
+  - **PRD Reference**: Section 10 (Phase 7), Section 4.7.
+  - **Deliverables**: `src/algorithms/invigilatorRostering.ts` and `src/components/invigilator/InvigilatorDutyChart.tsx` integrated in Review screen.
+  - **Acceptance Criteria**:
+    - Roster assigns 1 invigilator per 30 candidates (minimum 1 per room) plus room-specific Chief Superintendent appointment.
+    - Enforces department neutrality so faculty do not invigilate exams from their own department.
+    - Prevents faculty double-booking in multiple halls during identical sessions.
+    - Verified by automated tests in `tests/phase7InvigilatorRostering.test.ts`.
+
+- [x] **TASK-7.5: Visual Print Template Customizer**
+  - **Goal**: Visual editor for institutional branding, logo upload, signature block titles, font scale, and layout density.
+  - **PRD Reference**: Section 4.7, Section 10 (Phase 7).
+  - **Deliverables**: `src/models/templateConfig.ts` and `src/components/export/TemplateCustomizerModal.tsx` wired into Export Center.
+  - **Acceptance Criteria**:
+    - Real-time institutional header preview modal with logo file reader and scale controls.
+    - Dynamic typography and density adjustments (Compact / Standard / Spacious).
+    - Verified by automated tests in `tests/phase7TemplateCustomizer.test.ts`.
+
+- [x] **TASK-7.6: Barcode & QR Code Integration for Student Attendance**
+  - **Goal**: Pure vector SVG Code 39 1D barcodes and 2D QR matrix generation on official attendance registers and real-time handheld scanner verifier.
+  - **PRD Reference**: Section 4.7 (Output A & B), Section 10 (Phase 7).
+  - **Deliverables**: `src/utils/barcodeGenerator.ts`, `src/components/attendance/BarcodeScannerModal.tsx`, integrated into `AttendanceSheet1.tsx` and `AttendanceSheet2.tsx`, and wired into `ExportScreen.tsx`.
+  - **Acceptance Criteria**:
+    - Generates crisp vector SVG Code 39 barcodes for register numbers without external web fonts or CDN scripts.
+    - Generates deterministic 2D QR matrix verification SVGs with corner finder patterns.
+    - Interactive modal supports keyboard wedge handheld barcode scanners, instant room/seat lookup, and real-time attendance tallying.
+    - Verified by automated tests in `tests/phase7BarcodeAttendance.test.ts`.
 
 ---
 
-## Phase 15: Quality Assurance, Automated Testing & Edge Case Verification
+## 2. Definition of Done Checklist
 
-### Prerequisites / Dependencies
-- Phase 7, Phase 12, Phase 13, and Phase 14 completed
-
-- [ ] **TASK-15.1: Write Unit Tests for Seating Algorithm & Heuristics**
-  - **Goal**: Validate seating generator algorithm accuracy and constraint enforcement using Vitest/Jest.
-  - **Deliverables**: `tests/seatingGenerator.test.ts`.
-  - **Test Cases**:
-    - Feasible multi-branch dataset -> 0 conflicts produced.
-    - Deterministic output verification with fixed random seed.
-    - No student unassigned or double-booked.
-  - **Dependencies**: TASK-6.4, TASK-7.2
-  - **Acceptance Criteria**: All automated algorithm unit tests pass cleanly (`npm test`).
-
-- [ ] **TASK-15.2: Write Unit Tests for Capacity & Data Validation Engine**
-  - **Goal**: Verify capacity calculation and duplicate detection edge cases.
-  - **Deliverables**: `tests/validator.test.ts`.
-  - **Test Cases**:
-    - Student count > Available capacity -> Blocks generation with explicit shortage count.
-    - Duplicate register numbers -> Flags invalid rows.
-  - **Dependencies**: TASK-4.5, TASK-5.2
-  - **Acceptance Criteria**: Validation tests pass with 100% assertion coverage for failure modes.
-
-- [ ] **TASK-15.3: Write Unit Tests for Excel Export Structure & Roll Range Formatting**
-  - **Goal**: Verify generated Excel dataset integrity and roll range formatting utility.
-  - **Deliverables**: `tests/export.test.ts`.
-  - **Test Cases**:
-    - Range formatter handles continuous ranges (`1 to 10`) and non-contiguous gaps (`1 to 4, 7, 10 to 12`).
-    - Workbook contains 3 sheets with non-empty cell buffers.
-  - **Dependencies**: TASK-11.1, TASK-12.5
-  - **Acceptance Criteria**: Range formatting and Excel generator tests pass without errors.
-
-- [ ] **TASK-15.4: Test Edge Case 1 — Insufficient Seats / Single Branch Dataset**
-  - **Goal**: Verify graceful handling when zero-conflict arrangement is mathematically impossible.
-  - **Deliverables**: Edge case verification scenario report.
-  - **Dependencies**: TASK-7.1, TASK-8.2
-  - **Acceptance Criteria**: App displays yellow warning status, reports exact conflict count, and prevents false claims of zero conflicts.
-
-- [ ] **TASK-15.5: Test Edge Case 2 — Multi-Student Benches & Disabled Seats**
-  - **Goal**: Verify seating rules on classrooms with 2 students per bench and disabled seat obstructions.
-  - **Deliverables**: Edge case verification scenario report.
-  - **Dependencies**: TASK-3.3, TASK-6.2
-  - **Acceptance Criteria**: Disabled seats receive 0 student assignments; adjacent seats on the same bench correctly enforce same-branch prohibition.
-
-- [ ] **TASK-15.6: Test Edge Case 3 — Interactive Manual Swap & Real-Time Re-validation**
-  - **Goal**: Test manual student swap flow and undo/redo behavior.
-  - **Deliverables**: Manual swap test suite.
-  - **Dependencies**: TASK-10.3, TASK-10.4
-  - **Acceptance Criteria**: Swapping two students immediately updates validation metrics; clicking Undo restores previous arrangement state accurately.
-
-- [ ] **TASK-15.7: Run End-to-End Workflow Verification with Sample Dataset**
-  - **Goal**: Execute end-to-end integration test with full 180-student reference dataset.
-  - **Deliverables**: End-to-End verification report.
-  - **Dataset**: 180 students across CS, EC, ET, AM branches; Classrooms B301, B306, B307, B407, A220, A305.
-  - **Dependencies**: TASK-15.1 through TASK-15.6
-  - **Acceptance Criteria**: Full workflow succeeds from step 1 (Exam details entry) through step 7 (Excel & PDF export generation).
+For every atomic task, the following criteria must be satisfied prior to marking complete:
+1. **Requirements Satisfied:** Implements the exact specifications in `Exam_Seating_Arrangement_PRD.md`.
+2. **Deterministic & Rule-Based:** No stochastic hallucinations or LLM-driven seating decisions.
+3. **Type Safety:** TypeScript strict mode enabled with zero `any` types.
+4. **Validation Integrity:** Independent validator passes; corrupted inputs caught.
+5. **Print Fidelity:** Output documents tested for layout alignment, page breaks, and legibility.
+6. **Automated Tests:** Unit or integration test assertions accompany the feature.

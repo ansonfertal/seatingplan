@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import type { SeatingArrangement } from '../models/arrangement';
 import type { Classroom } from '../models/classroom';
 import type { Student } from '../models/student';
+import { getClassroomColumnRows } from '../utils/capacityCalculator';
 import { buildSeatingSummaryTable } from '../algorithms/summaryGenerator';
 import { applySheetDefaults, defaultBodyStyle, defaultHeaderStyle } from './excelFormatter';
 
@@ -88,9 +89,14 @@ export function generateRoomsSheet(
     XLSX.utils.sheet_add_aoa(sheet, [headerRow], { origin: `A${cursorRow + 1}` });
     cursorRow += 2;
 
-    for (let row = 0; row < classroom.rows; row += 1) {
+    const columnRows = getClassroomColumnRows(classroom.rows, classroom.columns, classroom.columnRows);
+    for (let row = 0; row < Math.max(...columnRows); row += 1) {
       const rowValues: Array<string | number> = [];
       for (let col = 0; col < classroom.columns; col += 1) {
+        if (row >= columnRows[col]) {
+          rowValues.push('');
+          continue;
+        }
         const cellValues: Array<string> = [];
         for (let seatIndex = 0; seatIndex < classroom.studentsPerBench; seatIndex += 1) {
           const assignment = arrangement.assignments.find(

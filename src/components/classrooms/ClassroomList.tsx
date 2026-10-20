@@ -112,7 +112,7 @@ export const ClassroomList: React.FC = () => {
                   </div>
                   <div>
                     <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1">Bench Size</span>
-                    {room.studentsPerBench} student(s)
+                    <span>{room.studentsPerBench} student(s) per bench</span>
                   </div>
                   <div className="col-span-2">
                     <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1">Obstructions</span>

@@ -43,32 +43,41 @@ export function validateArrangementConflicts(
 
         const studentA = studentMap.get(assignment.studentId);
         const studentB = studentMap.get(neighborAssignment.studentId);
-        if (!studentA || !studentB || studentA.branch !== studentB.branch) {
+        if (!studentA || !studentB) {
           return;
         }
 
-        const pairKey = [assignment.studentId, neighborAssignment.studentId].sort().join('|');
-        if (violationKeys.has(pairKey)) {
-          return;
+        const matchingReasons: Array<{ reason: ConflictDetail['reason']; value?: string; branch: string }> = [];
+        if (studentA.branch && studentA.branch === studentB.branch) {
+          matchingReasons.push({ reason: 'branch', branch: studentA.branch });
+        }
+        if (rules.sameSemesterSeparation && studentA.semester && studentA.semester === studentB.semester) {
+          matchingReasons.push({ reason: 'semester', value: studentA.semester, branch: studentA.branch });
+        }
+        if (rules.sameSubjectCodeSeparation && studentA.subjectCode && studentA.subjectCode === studentB.subjectCode) {
+          matchingReasons.push({ reason: 'subjectCode', value: studentA.subjectCode, branch: studentA.branch });
         }
 
-        violationKeys.add(pairKey);
+        matchingReasons.forEach(({ reason, value, branch }) => {
+          const pairKey = [assignment.studentId, neighborAssignment.studentId].sort().join('|');
+          const conflictKey = `${pairKey}:${reason}`;
+          if (violationKeys.has(conflictKey)) return;
+          violationKeys.add(conflictKey);
 
-        conflicts.push({
-          classroomId: classroom.id,
-          seatA: {
-            row: assignment.row,
-            column: assignment.column,
-            seatIndex: assignment.seatIndex,
-          },
-          seatB: {
-            row: neighborAssignment.row,
-            column: neighborAssignment.column,
-            seatIndex: neighborAssignment.seatIndex,
-          },
-          studentAId: assignment.studentId,
-          studentBId: neighborAssignment.studentId,
-          branch: studentA.branch,
+          conflicts.push({
+            classroomId: classroom.id,
+            seatA: { row: assignment.row, column: assignment.column, seatIndex: assignment.seatIndex },
+            seatB: {
+              row: neighborAssignment.row,
+              column: neighborAssignment.column,
+              seatIndex: neighborAssignment.seatIndex,
+            },
+            studentAId: assignment.studentId,
+            studentBId: neighborAssignment.studentId,
+            branch,
+            reason,
+            value,
+          });
         });
       });
     });
