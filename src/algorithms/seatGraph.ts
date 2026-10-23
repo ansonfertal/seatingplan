@@ -26,6 +26,8 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules = DEFAU
   const columnRows = getClassroomColumnRows(classroom.rows, classroom.columns, classroom.columnRows);
   const blockedBenches = classroom.blockedBenches || [];
 
+  const perBench = classroom.studentsPerBench ?? (classroom as unknown as { benchCapacity?: number }).benchCapacity ?? 2;
+
   const maxRows = Math.max(classroom.rows, ...columnRows);
   for (let row = 0; row < maxRows; row += 1) {
     for (let column = 0; column < classroom.columns; column += 1) {
@@ -35,7 +37,7 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules = DEFAU
       const isBenchBlocked = blockedBenches.some((b) => b.row === row && b.column === column);
       if (isBenchBlocked) continue;
 
-      for (let seatIndex = 0; seatIndex < classroom.studentsPerBench; seatIndex += 1) {
+      for (let seatIndex = 0; seatIndex < perBench; seatIndex += 1) {
         const seat = { row, column, seatIndex };
         const key = getSeatKey(seat);
 
@@ -75,8 +77,8 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules = DEFAU
     };
 
     // Pairwise same-bench partners (supports 1, 2, or 3 students per bench)
-    if (rules.sameBenchSeparation && classroom.studentsPerBench > 1) {
-      for (let partnerIdx = 0; partnerIdx < classroom.studentsPerBench; partnerIdx++) {
+    if (rules.sameBenchSeparation && perBench > 1) {
+      for (let partnerIdx = 0; partnerIdx < perBench; partnerIdx++) {
         if (partnerIdx !== seatIndex) {
           addNeighbor(row, column, partnerIdx);
         }
@@ -84,7 +86,7 @@ export function buildSeatGraph(classroom: Classroom, rules: SeatingRules = DEFAU
     }
 
     const addBenchNeighbors = (targetRow: number, targetColumn: number) => {
-      for (let s = 0; s < classroom.studentsPerBench; s++) {
+      for (let s = 0; s < perBench; s++) {
         addNeighbor(targetRow, targetColumn, s);
       }
     };

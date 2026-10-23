@@ -49,33 +49,47 @@
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.08);
 }
 
-/* Institutional Table Typography */
+/* Institutional Table Typography - Strictly Monochrome (Black & White) with Fixed Layout */
 .print-sheet table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .print-sheet th {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #ffffff;
+  color: #000000;
   font-weight: 700;
-  border: 1px solid #334155;
-  padding: 6px 8px;
+  border: 1px solid #000000;
+  padding: 6px 6px;
   font-size: 11px;
   text-align: left;
+  line-height: 1.2;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .print-sheet td {
-  border: 1px solid #475569;
-  padding: 6px 8px;
+  background-color: #ffffff;
+  border: 1px solid #000000;
+  padding: 5px 6px;
   font-size: 11px;
-  color: #0f172a;
+  color: #000000;
+  line-height: 1.25;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
-/* Minimum handwriting row height */
+/* Minimum handwriting row height with zero row overlapping */
 .print-sheet .handwriting-row td {
-  height: 32px;
+  height: 36px;
+  min-height: 36px;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 /* Print Media Rules */
@@ -129,6 +143,21 @@
     margin: 0 !important;
     width: 100% !important;
     min-height: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Strict monochrome enforcement for all print sheets */
+  .print-sheet,
+  .print-sheet * {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+
+  .print-sheet th,
+  .print-sheet td {
+    background-color: #ffffff !important;
+    border-color: #000000 !important;
   }
 
   .print-sheet.portrait {

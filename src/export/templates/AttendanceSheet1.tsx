@@ -11,9 +11,13 @@ export type AttendanceSheet1Props = {
   rooms: Room[];
   assignments: AssignedSeat[];
   students: ExamCandidate[];
-  targetRoomId?: string; // Optional: filter to single room or render all
+  targetRoomId?: string;
 };
 
+/**
+ * Attendance Sheet 1 (Strictly Monochrome Black & White)
+ * Contains columns: Register Number, Name of Student, Number of Main Sheets, Alpha Code, Serial Number, Signature
+ */
 export const AttendanceSheet1: React.FC<AttendanceSheet1Props> = ({
   exam,
   rooms,
@@ -25,9 +29,9 @@ export const AttendanceSheet1: React.FC<AttendanceSheet1Props> = ({
   const activeRooms = targetRoomId ? rooms.filter((r) => r.id === targetRoomId) : rooms;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-white">
       {activeRooms.map((room) => {
-        // Collect and sort assignments for this room: sorted by row, col, seatIndex, then registerNumber
+        // Collect and sort assignments for this room by register number
         const roomAssignments = assignments
           .filter((a) => a.roomId === room.id || a.classroomId === room.id)
           .map((a) => {
@@ -36,19 +40,17 @@ export const AttendanceSheet1: React.FC<AttendanceSheet1Props> = ({
             return { assignment: a, candidate };
           })
           .filter((item) => Boolean(item.candidate))
-          .sort((a, b) => {
-            if (a.assignment.row !== b.assignment.row) return a.assignment.row - b.assignment.row;
-            if (a.assignment.column !== b.assignment.column) return a.assignment.column - b.assignment.column;
-            const posA = a.assignment.position ?? a.assignment.seatIndex;
-            const posB = b.assignment.position ?? b.assignment.seatIndex;
-            if (posA !== posB) return posA - posB;
-            return (a.candidate?.registerNumber || '').localeCompare(b.candidate?.registerNumber || '');
-          });
+          .sort((a, b) =>
+            (a.candidate?.registerNumber || '').localeCompare(b.candidate?.registerNumber || '', undefined, {
+              numeric: true,
+              sensitivity: 'base',
+            })
+          );
 
         if (roomAssignments.length === 0) return null;
 
-        // Chunk candidates into pages of 24 candidates each for clean pagination
-        const pageSize = 24;
+        // 22 candidates per page for ample, non-overlapping handwriting row spacing
+        const pageSize = 22;
         const totalPages = Math.ceil(roomAssignments.length / pageSize) || 1;
         const pages = Array.from({ length: totalPages }, (_, i) =>
           roomAssignments.slice(i * pageSize, (i + 1) * pageSize)
@@ -56,90 +58,100 @@ export const AttendanceSheet1: React.FC<AttendanceSheet1Props> = ({
 
         return pages.map((pageCandidates, pageIdx) => (
           <PrintContainer
-            key={`${room.id}-page-${pageIdx}`}
+            key={`${room.id}-att1-page-${pageIdx}`}
             orientation="portrait"
-            documentTitle="ATTENDANCE SHEET #1"
-            documentSubtitle={`Hall: ${room.name} — Seating Order`}
+            documentTitle="ATTENDANCE SHEET 1"
+            documentSubtitle={`Hall: ${room.name} — Main Sheets & Booklet Accountability`}
             exam={exam}
             roomName={room.name}
             pageNumber={pageIdx + 1}
             totalPages={totalPages}
             footerContent={
-              <div className="border border-slate-700 bg-slate-50 p-3 text-xs">
+              <div className="border border-black bg-white p-3 text-xs text-black">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div>
-                    <span className="text-slate-600">Total Registered: </span>
-                    <strong className="text-slate-900">{roomAssignments.length}</strong>
+                    <span className="text-black">Total Registered: </span>
+                    <strong className="text-black font-bold">{roomAssignments.length}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-600">Present: </span>
-                    <span className="inline-block border-b border-slate-700 w-16"></span>
+                    <span className="text-black">Present: </span>
+                    <span className="inline-block border-b border-black w-20"></span>
                   </div>
                   <div>
-                    <span className="text-slate-600">Absent: </span>
-                    <span className="inline-block border-b border-slate-700 w-16"></span>
+                    <span className="text-black">Absent: </span>
+                    <span className="inline-block border-b border-black w-20"></span>
                   </div>
                 </div>
-                <div className="flex justify-between items-end pt-3 border-t border-slate-300">
+                <div className="flex justify-between items-end pt-3 border-t border-black">
                   <div className="space-y-1">
-                    <p className="text-[11px] text-slate-500">Invigilator 1 Name & Signature:</p>
-                    <div className="h-6 border-b border-dashed border-slate-400 w-48"></div>
+                    <p className="text-[11px] text-black">Invigilator 1 Signature:</p>
+                    <div className="h-6 border-b border-dashed border-black w-48"></div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[11px] text-slate-500">Invigilator 2 Name & Signature:</p>
-                    <div className="h-6 border-b border-dashed border-slate-400 w-48"></div>
+                    <p className="text-[11px] text-black">Invigilator 2 Signature:</p>
+                    <div className="h-6 border-b border-dashed border-black w-48"></div>
                   </div>
                   <div className="space-y-1 text-right">
-                    <p className="text-[11px] text-slate-500">Chief Superintendent:</p>
-                    <div className="h-6 border-b border-dashed border-slate-400 w-40 ml-auto"></div>
+                    <p className="text-[11px] text-black">Chief Superintendent Signature:</p>
+                    <div className="h-6 border-b border-dashed border-black w-44 ml-auto"></div>
                   </div>
                 </div>
               </div>
             }
           >
-            <table className="w-full text-xs">
+            <table className="w-full text-xs border-collapse table-fixed bg-white text-black border border-black">
+              <colgroup>
+                <col style={{ width: '6%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '11%' }} />
+              </colgroup>
               <thead>
-                <tr>
-                  <th className="w-10 text-center">Sl.</th>
-                  <th className="w-24">Bench</th>
-                  <th className="w-28">Register No.</th>
-                  <th>Student Name</th>
-                  <th className="w-16 text-center">Branch</th>
-                  <th className="w-20 text-center">Subject</th>
-                  <th className="w-28 text-center">Answer Book No.</th>
-                  <th className="w-32 text-center">Student Signature</th>
+                <tr className="bg-white text-black border-b border-black">
+                  <th className="text-center py-2 px-1 font-bold border border-black">Sl. No.</th>
+                  <th className="py-2 px-2 font-bold border border-black">Register Number</th>
+                  <th className="py-2 px-2 font-bold border border-black">Name of Student</th>
+                  <th className="text-center py-2 px-1 font-bold border border-black leading-tight">
+                    Number of Main Sheets
+                  </th>
+                  <th className="text-center py-2 px-1 font-bold border border-black">Alpha Code</th>
+                  <th className="text-center py-2 px-1 font-bold border border-black">Serial Number</th>
+                  <th className="text-center py-2 px-1 font-bold border border-black">Signature</th>
                 </tr>
               </thead>
               <tbody>
-                {pageCandidates.map(({ assignment, candidate }, idx) => {
+                {pageCandidates.map(({ candidate }, idx) => {
                   const globalIdx = pageIdx * pageSize + idx + 1;
-                  const benchPos = `R${assignment.row + 1}-C${assignment.column + 1} (P${(assignment.position ?? assignment.seatIndex) + 1})`;
 
                   return (
-                    <tr key={candidate?.id || idx} className="handwriting-row">
-                      <td className="text-center text-slate-600">{globalIdx}</td>
-                      <td className="font-mono text-[11px] text-slate-700">{benchPos}</td>
-                      <td className="font-mono font-bold text-slate-900">
-                        <div>{candidate?.registerNumber}</div>
+                    <tr key={candidate?.id || idx} className="handwriting-row border-b border-black bg-white">
+                      <td className="text-center font-medium text-black border border-black">{globalIdx}</td>
+                      <td className="font-mono font-bold text-black border border-black px-2 py-1 overflow-hidden">
+                        <div className="truncate leading-tight">{candidate?.registerNumber}</div>
                         {candidate?.registerNumber && (
                           <div
-                            className="mt-0.5 opacity-85"
+                            className="mt-0.5"
                             dangerouslySetInnerHTML={{
                               __html: generateCode39Svg(candidate.registerNumber, {
-                                height: 16,
+                                height: 14,
                                 narrowWidth: 0.7,
-                                wideWidth: 1.7,
+                                wideWidth: 1.6,
                                 displayValue: false,
                               }),
                             }}
                           />
                         )}
                       </td>
-                      <td className="font-medium text-slate-800">{candidate?.name}</td>
-                      <td className="text-center font-semibold text-slate-700">{candidate?.branch}</td>
-                      <td className="text-center font-mono font-semibold text-slate-700">{candidate?.subjectCode}</td>
-                      <td className="bg-slate-50/30"></td>
-                      <td className="bg-slate-50/30"></td>
+                      <td className="font-medium text-black border border-black px-2 py-1 overflow-hidden">
+                        <div className="truncate leading-tight">{candidate?.name}</div>
+                      </td>
+                      <td className="border border-black bg-white text-center"></td>
+                      <td className="border border-black bg-white text-center"></td>
+                      <td className="border border-black bg-white text-center"></td>
+                      <td className="border border-black bg-white text-center"></td>
                     </tr>
                   );
                 })}

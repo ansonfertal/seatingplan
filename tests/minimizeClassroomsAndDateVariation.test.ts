@@ -32,6 +32,7 @@ describe('Minimizing Classrooms Used & Date-Adaptive Seating Arrangement', () =>
     name,
     rows,
     columns,
+    studentsPerBench: benchCapacity,
     benchCapacity,
     usableCapacity: rows * columns * benchCapacity,
     active: true,

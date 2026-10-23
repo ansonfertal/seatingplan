@@ -14,6 +14,10 @@ export type SeatingNoticeSheetProps = {
   targetRoomId?: string;
 };
 
+/**
+ * Seating Arrangement Notice Sheet (Strictly Monochrome Black & White)
+ * Official high-contrast campus notice board display with zero overlap.
+ */
 export const SeatingNoticeSheet: React.FC<SeatingNoticeSheetProps> = ({
   exam,
   rooms,
@@ -25,7 +29,7 @@ export const SeatingNoticeSheet: React.FC<SeatingNoticeSheetProps> = ({
   const activeRooms = targetRoomId ? rooms.filter((r) => r.id === targetRoomId) : rooms;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-white">
       {activeRooms.map((room) => {
         const roomAssignments = assignments.filter(
           (a) => a.roomId === room.id || a.classroomId === room.id
@@ -66,78 +70,84 @@ export const SeatingNoticeSheet: React.FC<SeatingNoticeSheetProps> = ({
             documentSubtitle={`NOTICE BOARD DISPLAY — ${room.name.toUpperCase()}`}
             exam={exam}
             roomName={room.name}
-            className="notice-board-sheet"
+            className="notice-board-sheet bg-white text-black"
             footerContent={
-              <div className="border border-slate-900 bg-slate-50 p-4 text-xs font-medium">
+              <div className="border border-black bg-white p-3 text-xs font-medium text-black">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-slate-900">Total Seated in {room.name}: {roomAssignments.length} Candidates</p>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
+                    <p className="font-bold text-black">Total Seated in {room.name}: {roomAssignments.length} Candidates</p>
+                    <p className="text-[11px] text-black mt-0.5">
                       Candidates must occupy their designated seats 15 minutes before the exam commencement.
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-900">Controller of Examinations / Exam Cell</p>
-                    <p className="text-[10px] text-slate-500">Official Campus Display Copy</p>
+                    <p className="font-bold text-black">Controller of Examinations / Exam Cell</p>
+                    <p className="text-[10px] text-black">Official Campus Display Copy</p>
                   </div>
                 </div>
               </div>
             }
           >
-            {/* Prominent Hall Banner for quick recognition */}
-            <div className="mb-6 rounded-xl border-2 border-slate-900 bg-slate-100 p-4 text-center">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-600">
+            {/* Prominent Hall Banner - Strictly Monochrome */}
+            <div className="mb-4 rounded-xl border-2 border-black bg-white p-3 text-center">
+              <span className="text-xs font-bold uppercase tracking-widest text-black">
                 EXAMINATION HALL / ROOM
               </span>
-              <p className="text-3xl font-black tracking-tight text-slate-950 uppercase mt-0.5">
+              <p className="text-3xl font-black tracking-tight text-black uppercase mt-0.5">
                 {room.name}
               </p>
             </div>
 
-            {/* High-Contrast Roll Number Notice Table */}
-            <div className="space-y-4">
-              <table className="w-full text-left border-2 border-slate-900">
+            {/* High-Contrast Roll Number Notice Table - Fixed Layout, Zero Overlap */}
+            <div className="space-y-4 bg-white">
+              <table className="w-full text-left border-2 border-black border-collapse table-fixed bg-white">
+                <colgroup>
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '42%' }} />
+                  <col style={{ width: '12%' }} />
+                </colgroup>
                 <thead>
-                  <tr className="bg-slate-900 text-white">
-                    <th className="py-2.5 px-3 text-sm font-bold uppercase tracking-wider w-28 bg-slate-900 text-white border-slate-900">
+                  <tr className="bg-white text-black border-b-2 border-black">
+                    <th className="py-2 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
                       Branch
                     </th>
-                    <th className="py-2.5 px-3 text-sm font-bold uppercase tracking-wider w-20 bg-slate-900 text-white border-slate-900">
+                    <th className="py-2 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
                       Sem
                     </th>
-                    <th className="py-2.5 px-3 text-sm font-bold uppercase tracking-wider w-28 bg-slate-900 text-white border-slate-900">
+                    <th className="py-2 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
                       Course Code
                     </th>
-                    <th className="py-2.5 px-3 text-sm font-bold uppercase tracking-wider bg-slate-900 text-white border-slate-900">
+                    <th className="py-2 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
                       Allocated Register Number Range(s)
                     </th>
-                    <th className="py-2.5 px-3 text-sm font-bold uppercase tracking-wider w-20 text-center bg-slate-900 text-white border-slate-900">
+                    <th className="py-2 px-2.5 text-xs font-bold uppercase tracking-wider text-center text-black">
                       Count
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y-2 divide-slate-800">
+                <tbody>
                   {cohorts.map((cohort, idx) => {
                     const rangeText = formatRegisterRange(cohort.regNumbers);
 
                     return (
-                      <tr key={idx} className="border-b-2 border-slate-700">
-                        <td className="py-3 px-3 font-bold text-base text-slate-950 border-r border-slate-700">
+                      <tr key={idx} className="border-b border-black bg-white">
+                        <td className="py-2 px-2.5 font-bold text-sm text-black border-r border-black truncate">
                           {cohort.branch}
                         </td>
-                        <td className="py-3 px-3 font-bold text-base text-slate-900 border-r border-slate-700">
+                        <td className="py-2 px-2.5 font-bold text-sm text-black border-r border-black truncate">
                           {cohort.semester}
                         </td>
-                        <td className="py-3 px-3 font-mono font-bold text-sm text-slate-900 border-r border-slate-700">
+                        <td className="py-2 px-2.5 font-mono font-bold text-sm text-black border-r border-black truncate">
                           {cohort.subjectCode}
                         </td>
-                        <td className="py-3 px-4 border-r border-slate-700">
-                          {/* Large high-contrast typography conforming to PRD 4.7 */}
-                          <p className="font-mono text-base sm:text-lg font-black tracking-wide text-slate-950 leading-relaxed">
+                        <td className="py-2 px-3 border-r border-black break-words">
+                          <p className="font-mono text-sm sm:text-base font-bold tracking-wide text-black leading-relaxed">
                             {rangeText}
                           </p>
                         </td>
-                        <td className="py-3 px-3 text-center font-bold text-lg text-slate-950">
+                        <td className="py-2 px-2.5 text-center font-bold text-base text-black">
                           {cohort.regNumbers.length}
                         </td>
                       </tr>

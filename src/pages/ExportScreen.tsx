@@ -26,8 +26,10 @@ import {
 } from '../export/csvAllocationExporter';
 import {
   generateAttendanceSheet1Pdf,
+  generateAttendanceSheet2Pdf,
   generateSeatingNoticePdf,
   generateRoomSeatingPlanPdf,
+  generateDailyAttendancePdf,
   downloadGeneratedPdf,
 } from '../export/pdfPackGenerator';
 import { TemplateCustomizerModal } from '../components/export/TemplateCustomizerModal';
@@ -55,7 +57,7 @@ export const ExportScreen: React.FC = () => {
     activeVersionId,
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<TemplateTab>('seating_notice');
+  const [activeTab, setActiveTab] = useState<TemplateTab>('attendance_1');
   const [selectedRoomId, setSelectedRoomId] = useState<string>('all');
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -96,7 +98,7 @@ export const ExportScreen: React.FC = () => {
     window.print();
   };
 
-  // PDF Download Handler based on active template
+  // PDF Download Handler based on active template (Strictly Monochrome Black & White)
   const handleDownloadActivePdf = () => {
     const examCleanName = exam.examName.replace(/\s+/g, '_');
     const examDate = exam.examDate;
@@ -104,14 +106,19 @@ export const ExportScreen: React.FC = () => {
     if (activeTab === 'attendance_1') {
       const pdf = generateAttendanceSheet1Pdf(exam, classrooms, currentAssignments, students);
       downloadGeneratedPdf(pdf, `Attendance_Sheet_1_${examCleanName}_${examDate}.pdf`);
+    } else if (activeTab === 'attendance_2') {
+      const pdf = generateAttendanceSheet2Pdf(exam, classrooms, currentAssignments, students);
+      downloadGeneratedPdf(pdf, `Attendance_Sheet_2_${examCleanName}_${examDate}.pdf`);
     } else if (activeTab === 'seating_notice') {
       const pdf = generateSeatingNoticePdf(exam, classrooms, currentAssignments, students);
       downloadGeneratedPdf(pdf, `Seating_Notice_${examCleanName}_${examDate}.pdf`);
     } else if (activeTab === 'room_seating_plan') {
       const pdf = generateRoomSeatingPlanPdf(exam, classrooms, currentAssignments, students);
       downloadGeneratedPdf(pdf, `Room_Seating_Plan_${examCleanName}_${examDate}.pdf`);
+    } else if (activeTab === 'daily_attendance') {
+      const pdf = generateDailyAttendancePdf(exam, classrooms, currentAssignments, students);
+      downloadGeneratedPdf(pdf, `Daily_Attendance_${examCleanName}_${examDate}.pdf`);
     } else {
-      // Fallback: print document via browser print
       window.print();
     }
   };
@@ -204,58 +211,58 @@ export const ExportScreen: React.FC = () => {
         {/* Document Selector Pills */}
         <div className="flex flex-wrap items-center gap-1.5">
           <button
-            onClick={() => setActiveTab('seating_notice')}
-            className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
-              activeTab === 'seating_notice'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Output C: Seating Notice (Campus Board)
-          </button>
-
-          <button
-            onClick={() => setActiveTab('room_seating_plan')}
-            className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
-              activeTab === 'room_seating_plan'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Output E: Room Seating Plan (Door Diagram)
-          </button>
-
-          <button
             onClick={() => setActiveTab('attendance_1')}
             className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
               activeTab === 'attendance_1'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Output A: Attendance Sheet #1 (Signatures)
+            Attendance Sheet 1 (Main Sheets, Alpha Code, Serial No, Signature)
           </button>
 
           <button
             onClick={() => setActiveTab('attendance_2')}
             className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
               activeTab === 'attendance_2'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Output B: Attendance Sheet #2 (Booklets)
+            Attendance Sheet 2 (Subject Code, Signature)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('room_seating_plan')}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+              activeTab === 'room_seating_plan'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Room Seating Plan (Door Diagram)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('seating_notice')}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+              activeTab === 'seating_notice'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Seating Notice (Campus Board)
           </button>
 
           <button
             onClick={() => setActiveTab('daily_attendance')}
             className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
               activeTab === 'daily_attendance'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Output D: Daily Attendance (Summary)
+            Daily Attendance (Summary)
           </button>
 
           <button

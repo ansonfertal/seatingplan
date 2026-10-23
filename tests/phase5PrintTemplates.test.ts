@@ -8,6 +8,7 @@ import {
 } from '../src/export/csvAllocationExporter';
 import {
   generateAttendanceSheet1Pdf,
+  generateAttendanceSheet2Pdf,
   generateSeatingNoticePdf,
   generateRoomSeatingPlanPdf,
 } from '../src/export/pdfPackGenerator';
@@ -127,6 +128,13 @@ describe('Phase 5 — Five Print Templates & Print Pack Generator', () => {
   describe('TASK-5.2, 5.4, 5.6: Vector jsPDF Institutional Templates', () => {
     it('generates a valid Output A Attendance Sheet #1 jsPDF document', () => {
       const pdf = generateAttendanceSheet1Pdf(sampleExam, sampleRooms, sampleAssignments, sampleCandidates);
+
+      expect(pdf).toBeDefined();
+      expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
+    });
+
+    it('generates a valid Output B Attendance Sheet #2 jsPDF document', () => {
+      const pdf = generateAttendanceSheet2Pdf(sampleExam, sampleRooms, sampleAssignments, sampleCandidates);
 
       expect(pdf).toBeDefined();
       expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
