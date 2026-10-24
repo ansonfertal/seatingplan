@@ -1,3 +1,5 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   getUserDisplayName,
@@ -7,6 +9,7 @@ import {
   type User,
 } from '../src/models/user';
 import { useAuthStore } from '../src/store/authStore';
+import { UserRoleSwitcher } from '../src/components/auth/UserRoleSwitcher';
 
 describe('Examination Officials: Adding People to Different Posts & Dropdown Selection', () => {
   beforeEach(() => {
@@ -197,6 +200,16 @@ describe('Examination Officials: Adding People to Different Posts & Dropdown Sel
       expect(COMMON_EXAM_POSTS).toContain('Senior Superintendent');
       expect(COMMON_EXAM_POSTS).toContain('Hall Invigilator');
       expect(COMMON_EXAM_POSTS).toContain('Exam Cell In-Charge');
+    });
+  });
+
+  describe('Component Rendering', () => {
+    it('renders the switcher trigger button with active official and post badge', () => {
+      const html = renderToStaticMarkup(React.createElement(UserRoleSwitcher));
+      expect(html).toContain('Dr. Evelyn Reed');
+      expect(html).toContain('Chief Controller');
+      expect(html).toContain('admin');
+      expect(html).toContain('data-testid="user-role-switcher-container"');
     });
   });
 });
