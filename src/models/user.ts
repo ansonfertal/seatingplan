@@ -5,9 +5,50 @@ export type User = {
   name: string;
   email: string;
   role: UserRole;
+  post?: string;
   department?: string;
   avatarUrl?: string;
 };
+
+export const COMMON_EXAM_POSTS = [
+  'Exam Coordinator',
+  'Chief Superintendent',
+  'Senior Superintendent',
+  'Assistant Exam Coordinator',
+  'Hall Invigilator',
+  'Exam Cell In-Charge',
+  'Observer / Squad Member',
+  'Chief Controller',
+] as const;
+
+export function getUserDisplayName(user: { name: string }): string {
+  if (!user || !user.name) return 'Unknown User';
+  // Strip trailing (Post) if present in the legacy preset name format
+  return user.name.replace(/\s*\([^)]*\)$/, '').trim();
+}
+
+export function getUserPost(user: { name: string; post?: string; role: UserRole }): string {
+  if (!user) return 'Staff';
+  if (user.post && user.post.trim().length > 0) {
+    return user.post.trim();
+  }
+  // Try extracting from name format "Name (Post)"
+  const match = user.name.match(/\(([^)]+)\)$/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  // Fallback based on system role
+  switch (user.role) {
+    case 'admin':
+      return 'Chief Controller';
+    case 'coordinator':
+      return 'Exam Coordinator';
+    case 'invigilator':
+      return 'Hall Invigilator';
+    default:
+      return 'Exam Official';
+  }
+}
 
 export type AppPermission =
   | 'exam:create'
@@ -64,6 +105,7 @@ export const PRESET_USERS: User[] = [
     name: 'Dr. Evelyn Reed (Chief Controller)',
     email: 'controller@institution.edu',
     role: 'admin',
+    post: 'Chief Controller',
     department: 'Examination Cell',
   },
   {
@@ -71,6 +113,7 @@ export const PRESET_USERS: User[] = [
     name: 'Prof. Marcus Vance (Exam Coordinator)',
     email: 'coordinator@institution.edu',
     role: 'coordinator',
+    post: 'Exam Coordinator',
     department: 'Computer Science',
   },
   {
@@ -78,6 +121,7 @@ export const PRESET_USERS: User[] = [
     name: 'Dr. Sarah Jenkins (Hall Invigilator)',
     email: 'invigilator@institution.edu',
     role: 'invigilator',
+    post: 'Hall Invigilator',
     department: 'Electronics & Communication',
   },
 ];

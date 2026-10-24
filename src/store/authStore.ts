@@ -9,6 +9,15 @@ export type AuthState = {
   isAuthenticated: boolean;
   loginAs: (userId: string) => void;
   switchRole: (role: UserRole) => void;
+  addUser: (person: {
+    name: string;
+    post: string;
+    role: UserRole;
+    department?: string;
+    email?: string;
+  }) => User;
+  removeUser: (userId: string) => void;
+  updateUser: (userId: string, updates: Partial<User>) => void;
   can: (permission: AppPermission) => boolean;
   logout: () => void;
 };
@@ -57,6 +66,64 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
           }));
         }
+      },
+
+      addUser: (person: {
+        name: string;
+        post: string;
+        role: UserRole;
+        department?: string;
+        email?: string;
+      }) => {
+        const id = `user-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const trimmedName = person.name.trim();
+        const trimmedPost = person.post.trim();
+        const cleanEmail =
+          person.email && person.email.trim().length > 0
+            ? person.email.trim()
+            : `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'staff'}@institution.edu`;
+
+        const newUser: User = {
+          id,
+          name: trimmedName,
+          post: trimmedPost,
+          role: person.role,
+          department: person.department?.trim() || 'Academic Affairs',
+          email: cleanEmail,
+        };
+
+        set((state) => ({
+          users: [...state.users, newUser],
+          currentUser: newUser,
+          isAuthenticated: true,
+        }));
+
+        return newUser;
+      },
+
+      removeUser: (userId: string) => {
+        const state = get();
+        if (state.users.length <= 1) return;
+
+        const filtered = state.users.filter((u) => u.id !== userId);
+        const newCurrent = state.currentUser.id === userId ? filtered[0] : state.currentUser;
+
+        set({
+          users: filtered,
+          currentUser: newCurrent,
+        });
+      },
+
+      updateUser: (userId: string, updates: Partial<User>) => {
+        set((state) => {
+          const updatedUsers = state.users.map((u) => (u.id === userId ? { ...u, ...updates } : u));
+          const updatedCurrent =
+            state.currentUser.id === userId ? { ...state.currentUser, ...updates } : state.currentUser;
+          return {
+            users: updatedUsers,
+            currentUser: updatedCurrent,
+          };
+        });
       },
 
       can: (permission: AppPermission) => {

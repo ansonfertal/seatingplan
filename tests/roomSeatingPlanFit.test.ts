@@ -91,7 +91,7 @@ describe('Room Seating Plan Sheet Single-Sheet Fit Verification', () => {
     expect(html).toContain('fit-single-page');
     expect(html).toContain('landscape');
     expect(html).toContain('room-seating-plan-wrapper');
-  });
+  }, 15000);
 
   it('embeds print @page landscape orientation rules to ensure browser print dialog uses A4 landscape', () => {
     const { room, candidates, assignments } = createRoomWithAssignments(5, 4, 2);

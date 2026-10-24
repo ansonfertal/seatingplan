@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { clearDraft, getLastSavedTimestamp, hasDraft, readDraft } from '../storage/draftStorage';
 import { downloadProjectJson, importProjectJson } from '../storage/projectFile';
 import { useAppStore, type AppState } from '../store/appStore';
+import { useAuthStore } from '../store/authStore';
+import { getUserDisplayName, getUserPost } from '../models/user';
 
 const steps = [
   { label: 'Exam Details', path: '/exam' },
@@ -20,8 +22,12 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { resetStore, setExamDetails, setStudents, setRules, setArrangement, setValidation, setClassrooms, setLastActiveStep } = useAppStore();
+  const { currentUser } = useAuthStore();
   const [savedLabel, setSavedLabel] = useState(() => getLastSavedTimestamp());
   type DashboardStoreState = AppState;
+
+  const officialName = getUserDisplayName(currentUser);
+  const officialPost = getUserPost(currentUser);
 
   const handleContinueDraft = () => {
     const draft = readDraft();
@@ -117,11 +123,27 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 rounded-2xl bg-academic-gradient p-8 text-white shadow-lg shadow-indigo-500/20">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-indigo-100">Setup wizard</p>
-        <h2 className="text-3xl font-bold tracking-tight">Create a balanced exam seating plan</h2>
-        <p className="mt-3 max-w-2xl text-sm text-indigo-100">
-          Configure exam metadata, room layouts, student groups, and seating constraints before generating the final arrangement.
-        </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-indigo-100">Setup wizard</p>
+            <h2 className="text-3xl font-bold tracking-tight">Create a balanced exam seating plan</h2>
+            <p className="mt-3 max-w-2xl text-sm text-indigo-100">
+              Configure exam metadata, room layouts, student groups, and seating constraints before generating the final arrangement.
+            </p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl shrink-0 self-start md:self-auto min-w-[220px] max-w-xs shadow-inner">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">Active Examination Official</p>
+            <p className="text-base font-bold text-white mt-0.5 truncate">{officialName}</p>
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded-md bg-white/20 text-white font-medium text-xs">
+                {officialPost}
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-indigo-900/60 text-indigo-200 border border-indigo-300/30">
+                {currentUser.role}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
