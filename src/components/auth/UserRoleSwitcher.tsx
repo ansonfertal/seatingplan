@@ -115,10 +115,6 @@ export const UserRoleSwitcher: React.FC = () => {
 
   const handleDeleteUser = (e: React.MouseEvent, userToDelete: User) => {
     e.stopPropagation();
-    if (users.length <= 1) {
-      window.alert('At least one examination official must remain configured in the system.');
-      return;
-    }
     const confirmed = window.confirm(
       `Are you sure you want to remove ${getUserDisplayName(userToDelete)} (${getUserPost(
         userToDelete
@@ -142,22 +138,36 @@ export const UserRoleSwitcher: React.FC = () => {
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white shadow-xs hover:bg-slate-50 transition-all text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
           aria-haspopup="true"
           aria-expanded={isOpen}
-          title={`Active Official: ${currentDisplayName} (${currentPost})`}
+          title={
+            currentUser
+              ? `Active Official: ${currentDisplayName} (${currentPost})`
+              : 'Select or add an examination official'
+          }
         >
           <UserCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
           <div className="flex items-center gap-1.5 text-left truncate max-w-[200px] sm:max-w-[280px]">
-            <span className="font-semibold text-slate-800 truncate">{currentDisplayName}</span>
-            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 truncate">
-              {currentPost}
+            <span className="font-semibold text-slate-800 truncate">
+              {currentUser ? currentDisplayName : 'Select / Add Official'}
             </span>
+            {currentUser && (
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 truncate">
+                {currentPost}
+              </span>
+            )}
           </div>
-          <span
-            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border shrink-0 ${getRoleBadgeColor(
-              currentUser.role
-            )}`}
-          >
-            {currentUser.role}
-          </span>
+          {currentUser ? (
+            <span
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border shrink-0 ${getRoleBadgeColor(
+                currentUser.role
+              )}`}
+            >
+              {currentUser.role}
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border shrink-0 bg-slate-100 text-slate-600 border-slate-200">
+              Not Set
+            </span>
+          )}
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         </button>
 
@@ -186,59 +196,64 @@ export const UserRoleSwitcher: React.FC = () => {
 
               {/* Personnel List */}
               <div className="py-1 max-h-72 overflow-y-auto" role="none">
-                {users.map((user) => {
-                  const isSelected = user.id === currentUser.id;
-                  const displayName = getUserDisplayName(user);
-                  const post = getUserPost(user);
-                  const isPreset = user.id.startsWith('user-admin-') ||
-                    user.id.startsWith('user-coord-') ||
-                    user.id.startsWith('user-invig-');
+                {users.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-slate-500 text-xs">
+                    <UserCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="font-semibold text-slate-700">No Officials Configured Yet</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Add personnel to examination posts below.
+                    </p>
+                  </div>
+                ) : (
+                  users.map((user) => {
+                    const isSelected = currentUser?.id === user.id;
+                    const displayName = getUserDisplayName(user);
+                    const post = getUserPost(user);
 
-                  return (
-                    <div
-                      key={user.id}
-                      onClick={() => {
-                        loginAs(user.id);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors cursor-pointer group ${
-                        isSelected ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : 'hover:bg-slate-50'
-                      }`}
-                      role="menuitem"
-                    >
-                      <div className="space-y-1 min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-slate-900 truncate">
-                            {displayName}
-                          </span>
-                          {isSelected && (
-                            <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/80">
-                            <Briefcase className="w-2.5 h-2.5" />
-                            {post}
-                          </span>
-                          {user.department && (
-                            <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
-                              • {user.department}
+                    return (
+                      <div
+                        key={user.id}
+                        onClick={() => {
+                          loginAs(user.id);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors cursor-pointer group ${
+                          isSelected ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : 'hover:bg-slate-50'
+                        }`}
+                        role="menuitem"
+                      >
+                        <div className="space-y-1 min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-900 truncate">
+                              {displayName}
                             </span>
-                          )}
+                            {isSelected && (
+                              <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                              <Briefcase className="w-2.5 h-2.5" />
+                              {post}
+                            </span>
+                            {user.department && (
+                              <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                                • {user.department}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getRoleBadgeColor(
-                            user.role
-                          )}`}
-                        >
-                          {user.role}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getRoleBadgeColor(
+                              user.role
+                            )}`}
+                          >
+                            {user.role}
+                          </span>
 
-                        {!isPreset && users.length > 1 && (
                           <button
                             type="button"
                             onClick={(e) => handleDeleteUser(e, user)}
@@ -248,11 +263,11 @@ export const UserRoleSwitcher: React.FC = () => {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* Action Button: Add Person to Post */}

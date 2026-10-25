@@ -120,6 +120,26 @@ export const ClassroomList: React.FC = () => {
                       ? <span className="text-orange-600">{room.disabledSeats.length} seats disabled</span> 
                       : 'None'}
                   </div>
+                  <div className="col-span-2 pt-2 border-t border-gray-100">
+                    <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Users className="w-3 h-3 text-indigo-500" />
+                      Assigned Invigilator(s) ({room.invigilators?.length || 0})
+                    </span>
+                    {room.invigilators && room.invigilators.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {room.invigilators.map((invig, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          >
+                            Invigilator {idx + 1}: {invig}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">None assigned (click Edit to select invigilators)</span>
+                    )}
+                  </div>
                 </div>
               </div>
               

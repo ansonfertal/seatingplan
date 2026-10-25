@@ -84,11 +84,15 @@ export const AttendanceSheet2: React.FC<AttendanceSheet2Props> = ({
                 </div>
                 <div className="flex justify-between items-end pt-3 border-t border-black">
                   <div className="space-y-1">
-                    <p className="text-[11px] text-black">Hall Invigilator Signature:</p>
+                    <p className="text-[11px] text-black">
+                      Hall Invigilator Signature{room.invigilators && room.invigilators.length > 0 ? ` (${room.invigilators.join(', ')})` : ''}:
+                    </p>
                     <div className="h-6 border-b border-dashed border-black w-52"></div>
                   </div>
                   <div className="space-y-1 text-right">
-                    <p className="text-[11px] text-black">Exam Cell Verification Official Seal:</p>
+                    <p className="text-[11px] text-black">
+                      Exam Cell Verification / Chief Superintendent{exam.adminName ? ` (${exam.adminName})` : ''}:
+                    </p>
                     <div className="h-6 border-b border-dashed border-black w-52 ml-auto"></div>
                   </div>
                 </div>

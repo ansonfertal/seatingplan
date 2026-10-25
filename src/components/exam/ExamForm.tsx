@@ -14,11 +14,18 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import { Copy, Archive, CheckCircle2, AlertTriangle, Clock, Building2, Calendar, FileText } from 'lucide-react';
+import { Copy, Archive, CheckCircle2, AlertTriangle, Clock, Building2, Calendar, FileText, Users, UserPlus, Shield } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { getUserDisplayName, getUserPost } from '../../models/user';
 
 export const ExamForm: React.FC = () => {
   const navigate = useNavigate();
   const { exam, setExamDetails, duplicateExam, archiveExam } = useAppStore();
+  const { users, addUser } = useAuthStore();
+
+  const [newInvigName, setNewInvigName] = React.useState('');
+  const [newInvigDept, setNewInvigDept] = React.useState('');
+  const [showAddInvigInline, setShowAddInvigInline] = React.useState(false);
 
   const defaultExamValues: ExamDetails = {
     examName: exam?.examName || exam?.name || '',
@@ -41,6 +48,12 @@ export const ExamForm: React.FC = () => {
     examCode: exam?.examCode || 'KTU-S5-2026',
     documentCode: exam?.documentCode || 'AISAT/Form/QPM17/F4',
     status: exam?.status || 'draft',
+    coordinatorId: exam?.coordinatorId || '',
+    coordinatorName: exam?.coordinatorName || '',
+    adminId: exam?.adminId || '',
+    adminName: exam?.adminName || '',
+    invigilatorIds: exam?.invigilatorIds || [],
+    invigilatorNames: exam?.invigilatorNames || [],
   };
 
   const {
@@ -58,6 +71,7 @@ export const ExamForm: React.FC = () => {
   const startTime = watch('startTime');
   const endTime = watch('endTime');
   const durationMinutes = watch('durationMinutes');
+  const selectedInvigilatorNames = watch('invigilatorNames') || [];
   const isOvernight = watch('isOvernight');
   const examStatus = watch('status') || 'draft';
 
@@ -335,6 +349,231 @@ export const ExamForm: React.FC = () => {
                 {...register('documentCode')}
                 error={errors.documentCode?.message}
               />
+            </div>
+          </div>
+
+          {/* Examination Officials & Invigilators Section */}
+          <div className="space-y-4 pt-4 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-medium text-sm text-slate-800">
+                <Shield className="w-4 h-4 text-indigo-600" />
+                <span>Examination Officials & Invigilation Panel</span>
+              </div>
+              <span className="text-xs text-slate-400">Select authorized personnel for this examination</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              {/* Exam Coordinator Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Exam Coordinator *
+                </label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                  value={watch('coordinatorName') || ''}
+                  onChange={(e) => {
+                    const selName = e.target.value;
+                    const matched = users.find((u) => getUserDisplayName(u) === selName || u.name === selName);
+                    setValue('coordinatorName', selName, { shouldValidate: true, shouldDirty: true });
+                    setValue('coordinatorId', matched?.id || '', { shouldValidate: true, shouldDirty: true });
+                  }}
+                >
+                  <option value="">-- Select Exam Coordinator --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={getUserDisplayName(u)}>
+                      {getUserDisplayName(u)} ({getUserPost(u)})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Lead faculty member responsible for overall seating & timetable planning.
+                </span>
+              </div>
+
+              {/* Chief Superintendent / Admin Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Chief Superintendent / Controller
+                </label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                  value={watch('adminName') || ''}
+                  onChange={(e) => {
+                    const selName = e.target.value;
+                    const matched = users.find((u) => getUserDisplayName(u) === selName || u.name === selName);
+                    setValue('adminName', selName, { shouldValidate: true, shouldDirty: true });
+                    setValue('adminId', matched?.id || '', { shouldValidate: true, shouldDirty: true });
+                  }}
+                >
+                  <option value="">-- Select Chief Superintendent / Controller --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={getUserDisplayName(u)}>
+                      {getUserDisplayName(u)} ({getUserPost(u)})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Official signing off on attendance and final institutional reports.
+                </span>
+              </div>
+            </div>
+
+            {/* Multiple Invigilators Selection */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-slate-800">
+                      Examination Invigilators ({selectedInvigilatorNames.length} Selected)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Select multiple invigilators for this examination. These will be assignable to specific classrooms.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowAddInvigInline(!showAddInvigInline)}
+                  className="flex items-center gap-1.5 text-xs"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
+                  + Add New Invigilator
+                </Button>
+              </div>
+
+              {/* Inline Add Invigilator Form */}
+              {showAddInvigInline && (
+                <div className="p-3 bg-white rounded-lg border border-indigo-200 shadow-xs space-y-2 animate-in fade-in duration-100">
+                  <p className="text-xs font-semibold text-indigo-900">Add & Assign New Faculty Invigilator</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Faculty Full Name (e.g. Dr. Robert Chen)"
+                      value={newInvigName}
+                      onChange={(e) => setNewInvigName(e.target.value)}
+                      className="px-3 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:col-span-2"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Department (e.g. Mechanical Engg)"
+                      value={newInvigDept}
+                      onChange={(e) => setNewInvigDept(e.target.value)}
+                      className="px-3 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAddInvigInline(false)}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if (!newInvigName.trim()) return;
+                        const addedUser = addUser({
+                          name: newInvigName.trim(),
+                          post: 'Hall Invigilator',
+                          role: 'invigilator',
+                          department: newInvigDept.trim() || 'Academic Affairs',
+                        });
+                        const displayName = getUserDisplayName(addedUser);
+                        const currentList = watch('invigilatorNames') || [];
+                        const currentIds = watch('invigilatorIds') || [];
+                        setValue('invigilatorNames', [...currentList, displayName], {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                        setValue('invigilatorIds', [...currentIds, addedUser.id], {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                        setNewInvigName('');
+                        setNewInvigDept('');
+                        setShowAddInvigInline(false);
+                      }}
+                      disabled={!newInvigName.trim()}
+                      className="text-xs"
+                    >
+                      Add & Select Invigilator
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Invigilators Choice Pills / Checkboxes */}
+              {users.length === 0 ? (
+                <div className="text-center py-4 bg-white rounded-lg border border-dashed border-slate-200">
+                  <p className="text-xs text-slate-500 font-medium">No invigilators or faculty registered yet.</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Click "+ Add New Invigilator" above to add faculty members for this exam.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
+                  {users.map((u) => {
+                    const name = getUserDisplayName(u);
+                    const isChecked = selectedInvigilatorNames.includes(name);
+                    return (
+                      <label
+                        key={u.id}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                          isChecked
+                            ? 'bg-emerald-50/80 border-emerald-300 shadow-2xs'
+                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            const currentList = watch('invigilatorNames') || [];
+                            const currentIds = watch('invigilatorIds') || [];
+                            if (currentList.includes(name)) {
+                              setValue(
+                                'invigilatorNames',
+                                currentList.filter((n) => n !== name),
+                                { shouldValidate: true, shouldDirty: true }
+                              );
+                              setValue(
+                                'invigilatorIds',
+                                currentIds.filter((id) => id !== u.id),
+                                { shouldValidate: true, shouldDirty: true }
+                              );
+                            } else {
+                              setValue('invigilatorNames', [...currentList, name], {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                              setValue('invigilatorIds', [...currentIds, u.id], {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                            }
+                          }}
+                          className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-slate-900 truncate">{name}</p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 truncate mt-0.5">
+                            <span className="font-medium text-emerald-700">{getUserPost(u)}</span>
+                            {u.department && <span>• {u.department}</span>}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

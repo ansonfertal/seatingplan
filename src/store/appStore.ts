@@ -152,6 +152,12 @@ export const useAppStore = create<AppState>()(
             examCode: examInput.examCode,
             documentCode: examInput.documentCode || 'AISAT/Form/QPM17/F4',
             status: examInput.status || 'draft',
+            coordinatorId: examInput.coordinatorId,
+            coordinatorName: examInput.coordinatorName,
+            adminId: examInput.adminId,
+            adminName: examInput.adminName,
+            invigilatorIds: examInput.invigilatorIds || [],
+            invigilatorNames: examInput.invigilatorNames || [],
             createdAt: examInput.createdAt || state.exam?.createdAt || now,
             updatedAt: now,
           };

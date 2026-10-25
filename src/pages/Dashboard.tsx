@@ -133,13 +133,13 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl shrink-0 self-start md:self-auto min-w-[220px] max-w-xs shadow-inner">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">Active Examination Official</p>
-            <p className="text-base font-bold text-white mt-0.5 truncate">{officialName}</p>
+            <p className="text-base font-bold text-white mt-0.5 truncate">{currentUser ? officialName : 'Not Configured'}</p>
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-md bg-white/20 text-white font-medium text-xs">
-                {officialPost}
+                {currentUser ? officialPost : 'Unassigned'}
               </span>
               <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-indigo-900/60 text-indigo-200 border border-indigo-300/30">
-                {currentUser.role}
+                {currentUser ? currentUser.role : 'Open Access'}
               </span>
             </div>
           </div>

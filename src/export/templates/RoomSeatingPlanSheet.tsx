@@ -79,7 +79,11 @@ export const RoomSeatingPlanSheet: React.FC<RoomSeatingPlanSheetProps> = ({
             compactHeader={true}
             hideStandardFooter={true}
             documentTitle="ROOM SEATING PLAN DIAGRAM"
-            documentSubtitle={`HALL: ${room.name.toUpperCase()} — BENCH & POSITION MAP`}
+            documentSubtitle={`HALL: ${room.name.toUpperCase()} — BENCH & POSITION MAP${
+              room.invigilators && room.invigilators.length > 0
+                ? ` • INVIGILATOR(S): ${room.invigilators.join(', ')}`
+                : ''
+            }`}
             exam={exam}
             roomName={room.name}
             className="fit-single-page bg-white text-black"

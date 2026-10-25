@@ -182,9 +182,11 @@ export function generateAttendanceSheet1Pdf(
     pdf.text('Present: ____________', margin + 65, y + 9);
     pdf.text('Absent: ____________', margin + 125, y + 9);
 
+    const invig1Label = room.invigilators?.[0] ? `Invigilator 1 (${room.invigilators[0]}):` : 'Invigilator 1 Signature:';
+    const chiefLabel = exam.adminName ? `Chief Superintendent (${exam.adminName}):` : 'Chief Superintendent Signature:';
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Invigilator 1 Signature: _______________________', margin + 4, y + 17);
-    pdf.text('Chief Superintendent Signature: _______________________', margin + 95, y + 17);
+    pdf.text(`${invig1Label} _______________________`, margin + 4, y + 17);
+    pdf.text(`${chiefLabel} _______________________`, margin + 95, y + 17);
   });
 
   return pdf;
@@ -322,9 +324,16 @@ export function generateAttendanceSheet2Pdf(
     pdf.text('Present Count: ____________', margin + 65, y + 9);
     pdf.text('Absent Count: ____________', margin + 125, y + 9);
 
+    const invigLabel =
+      room.invigilators && room.invigilators.length > 0
+        ? `Hall Invigilator (${room.invigilators.join(', ')}):`
+        : 'Hall Invigilator Signature:';
+    const chiefLabel = exam.adminName
+      ? `Chief Superintendent (${exam.adminName}):`
+      : 'Exam Cell Verification Seal:';
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Hall Invigilator Signature: _______________________', margin + 4, y + 17);
-    pdf.text('Exam Cell Verification Seal: _______________________', margin + 105, y + 17);
+    pdf.text(`${invigLabel} _______________________`, margin + 4, y + 17);
+    pdf.text(`${chiefLabel} _______________________`, margin + 105, y + 17);
   });
 
   return pdf;

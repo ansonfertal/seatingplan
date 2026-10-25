@@ -37,6 +37,8 @@ export type Room = {
   blockedBenches?: BenchPosition[];
   /** Calculated effective capacity */
   usableCapacity?: number;
+  /** One or more assigned invigilator names for this classroom */
+  invigilators?: string[];
 };
 
 /** Backward-compatible alias for Room */

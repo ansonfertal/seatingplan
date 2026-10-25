@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,6 +7,10 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { calculateUsableCapacityForClassroom } from '../../utils/capacityCalculator';
+import { useAuthStore } from '../../store/authStore';
+import { useAppStore } from '../../store/appStore';
+import { getUserDisplayName } from '../../models/user';
+import { Users, UserCheck, Plus, X } from 'lucide-react';
 
 const classroomSchema = z
   .object({
@@ -46,6 +50,11 @@ export const ClassroomFormModal: React.FC<ClassroomFormModalProps> = ({
   onSave,
   initialData,
 }) => {
+  const { users } = useAuthStore();
+  const exam = useAppStore((state) => state.exam);
+  const [selectedInvigilators, setSelectedInvigilators] = useState<string[]>([]);
+  const [customInvigName, setCustomInvigName] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -71,6 +80,8 @@ export const ClassroomFormModal: React.FC<ClassroomFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setSelectedInvigilators(initialData?.invigilators || []);
+      setCustomInvigName('');
       if (initialData) {
         const uniformRows = initialData.rows;
         const normalizedColumnRows = Array.from(
@@ -177,9 +188,40 @@ export const ClassroomFormModal: React.FC<ClassroomFormModalProps> = ({
       disabledSeats: cleanedDisabledSeats,
       blockedBenches: cleanedBlockedBenches,
       usableCapacity,
+      invigilators: selectedInvigilators,
     };
     onSave(classroom);
     onClose();
+  };
+
+  // Gather available invigilator options from exam details and authStore users
+  const availableInvigilatorNames = React.useMemo(() => {
+    const set = new Set<string>();
+    if (exam?.invigilatorNames) {
+      exam.invigilatorNames.forEach((n) => set.add(n));
+    }
+    users.forEach((u) => {
+      set.add(getUserDisplayName(u));
+    });
+    selectedInvigilators.forEach((n) => set.add(n));
+    return Array.from(set).filter((n) => n && n !== 'Unassigned');
+  }, [exam?.invigilatorNames, users, selectedInvigilators]);
+
+  const handleToggleRoomInvigilator = (name: string) => {
+    if (selectedInvigilators.includes(name)) {
+      setSelectedInvigilators(selectedInvigilators.filter((n) => n !== name));
+    } else {
+      setSelectedInvigilators([...selectedInvigilators, name]);
+    }
+  };
+
+  const handleAddCustomInvigilator = () => {
+    const trimmed = customInvigName.trim();
+    if (!trimmed) return;
+    if (!selectedInvigilators.includes(trimmed)) {
+      setSelectedInvigilators([...selectedInvigilators, trimmed]);
+    }
+    setCustomInvigName('');
   };
 
   return (
@@ -298,6 +340,102 @@ export const ClassroomFormModal: React.FC<ClassroomFormModalProps> = ({
                 />
                 <span className="font-medium">Active Room for Examination</span>
               </label>
+            </div>
+          </div>
+
+          {/* Assigned Invigilators for this Room */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Assigned Invigilators ({selectedInvigilators.length} Selected)
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500">
+                Select 1 or more invigilators to supervise this room
+              </span>
+            </div>
+
+            {/* Currently Assigned Badges */}
+            {selectedInvigilators.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 p-2 bg-white rounded-lg border border-slate-200">
+                {selectedInvigilators.map((name, idx) => (
+                  <span
+                    key={name}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>
+                      Invigilator {idx + 1}: {name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleRoomInvigilator(name)}
+                      className="text-emerald-500 hover:text-red-600 ml-0.5"
+                      title={`Remove ${name}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Selectable Invigilator Chips */}
+            {availableInvigilatorNames.length > 0 && (
+              <div>
+                <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+                  Select from examination invigilators / faculty:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableInvigilatorNames.map((name) => {
+                    const isAssigned = selectedInvigilators.includes(name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => handleToggleRoomInvigilator(name)}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 ${
+                          isAssigned
+                            ? 'bg-emerald-600 text-white border-emerald-600 font-medium shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {isAssigned && <UserCheck className="w-3 h-3" />}
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Add Custom Invigilator input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                placeholder="Or type invigilator name to assign..."
+                value={customInvigName}
+                onChange={(e) => setCustomInvigName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomInvigilator();
+                  }
+                }}
+                className="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddCustomInvigilator}
+                disabled={!customInvigName.trim()}
+                className="text-xs"
+              >
+                <Plus className="w-3.5 h-3.5" /> Assign to Room
+              </Button>
             </div>
           </div>
         </div>

@@ -1,12 +1,39 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { canUserPerform, ROLE_PERMISSIONS, PRESET_USERS } from '../src/models/user';
+import { canUserPerform, ROLE_PERMISSIONS, type User } from '../src/models/user';
 import { useAuthStore } from '../src/store/authStore';
+
+const TEST_USERS: User[] = [
+  {
+    id: 'test-admin-1',
+    name: 'Administrator Profile',
+    email: 'admin@institution.edu',
+    role: 'admin',
+    post: 'Chief Controller',
+    department: 'Examination Cell',
+  },
+  {
+    id: 'test-coord-1',
+    name: 'Coordinator Profile',
+    email: 'coordinator@institution.edu',
+    role: 'coordinator',
+    post: 'Exam Coordinator',
+    department: 'Academic Affairs',
+  },
+  {
+    id: 'test-invig-1',
+    name: 'Invigilator Profile',
+    email: 'invigilator@institution.edu',
+    role: 'invigilator',
+    post: 'Hall Invigilator',
+    department: 'Science & Humanities',
+  },
+];
 
 describe('TASK-7.2: Multi-User Authentication & Role-Based Access Control (RBAC)', () => {
   beforeEach(() => {
     useAuthStore.setState({
-      currentUser: PRESET_USERS[0],
-      users: PRESET_USERS,
+      currentUser: TEST_USERS[0],
+      users: [...TEST_USERS],
       isAuthenticated: true,
     });
   });
@@ -39,30 +66,30 @@ describe('TASK-7.2: Multi-User Authentication & Role-Based Access Control (RBAC)
     const store = useAuthStore.getState();
 
     // Default admin
-    expect(store.currentUser.role).toBe('admin');
+    expect(store.currentUser?.role).toBe('admin');
     expect(store.can('admin:privacy_wipe')).toBe(true);
 
     // Switch to coordinator
     store.switchRole('coordinator');
-    expect(useAuthStore.getState().currentUser.role).toBe('coordinator');
+    expect(useAuthStore.getState().currentUser?.role).toBe('coordinator');
     expect(useAuthStore.getState().can('seating:generate')).toBe(true);
     expect(useAuthStore.getState().can('admin:privacy_wipe')).toBe(false);
 
     // Switch to invigilator
     store.switchRole('invigilator');
-    expect(useAuthStore.getState().currentUser.role).toBe('invigilator');
+    expect(useAuthStore.getState().currentUser?.role).toBe('invigilator');
     expect(useAuthStore.getState().can('seating:generate')).toBe(false);
     expect(useAuthStore.getState().can('seating:swap')).toBe(false);
     expect(useAuthStore.getState().can('export:download')).toBe(true);
   });
 
-  it('supports direct user login by ID with preset institutional profiles', () => {
+  it('supports direct user login by ID with institutional profiles', () => {
     const store = useAuthStore.getState();
-    const invigilatorProfile = PRESET_USERS.find((u) => u.role === 'invigilator')!;
+    const invigilatorProfile = TEST_USERS.find((u) => u.role === 'invigilator')!;
 
     store.loginAs(invigilatorProfile.id);
 
-    const current = useAuthStore.getState().currentUser;
+    const current = useAuthStore.getState().currentUser!;
     expect(current.id).toBe(invigilatorProfile.id);
     expect(current.name).toBe(invigilatorProfile.name);
     expect(current.department).toBe(invigilatorProfile.department);

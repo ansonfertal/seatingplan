@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AppPermission, User, UserRole } from '../models/user';
-import { canUserPerform, PRESET_USERS } from '../models/user';
+import { canUserPerform } from '../models/user';
 
 export type AuthState = {
-  currentUser: User;
+  currentUser: User | null;
   users: User[];
   isAuthenticated: boolean;
   loginAs: (userId: string) => void;
@@ -21,6 +21,21 @@ export type AuthState = {
   can: (permission: AppPermission) => boolean;
   logout: () => void;
 };
+
+// Purge any legacy pre-populated dummy users (Evelyn Reed, Marcus Vance, Sarah Jenkins)
+function filterLegacyPresets(usersList: User[]): User[] {
+  if (!Array.isArray(usersList)) return [];
+  return usersList.filter(
+    (u) =>
+      u &&
+      u.id !== 'user-admin-1' &&
+      u.id !== 'user-coord-1' &&
+      u.id !== 'user-invig-1' &&
+      !u.name?.includes('Evelyn Reed') &&
+      !u.name?.includes('Marcus Vance') &&
+      !u.name?.includes('Sarah Jenkins')
+  );
+}
 
 const safeStorage = {
   getItem: (name: string) => {
@@ -44,8 +59,8 @@ const safeStorage = {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      currentUser: PRESET_USERS[0], // Defaults to Admin
-      users: PRESET_USERS,
+      currentUser: null,
+      users: [],
       isAuthenticated: true,
 
       loginAs: (userId: string) => {
@@ -60,9 +75,8 @@ export const useAuthStore = create<AuthState>()(
         if (matching) {
           set({ currentUser: matching, isAuthenticated: true });
         } else {
-          // If no preset user with role exists, update current user role
           set((state) => ({
-            currentUser: { ...state.currentUser, role },
+            currentUser: state.currentUser ? { ...state.currentUser, role } : null,
             isAuthenticated: true,
           }));
         }
@@ -103,10 +117,8 @@ export const useAuthStore = create<AuthState>()(
 
       removeUser: (userId: string) => {
         const state = get();
-        if (state.users.length <= 1) return;
-
         const filtered = state.users.filter((u) => u.id !== userId);
-        const newCurrent = state.currentUser.id === userId ? filtered[0] : state.currentUser;
+        const newCurrent = state.currentUser?.id === userId ? filtered[0] || null : state.currentUser;
 
         set({
           users: filtered,
@@ -118,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
         set((state) => {
           const updatedUsers = state.users.map((u) => (u.id === userId ? { ...u, ...updates } : u));
           const updatedCurrent =
-            state.currentUser.id === userId ? { ...state.currentUser, ...updates } : state.currentUser;
+            state.currentUser?.id === userId ? { ...state.currentUser, ...updates } : state.currentUser;
           return {
             users: updatedUsers,
             currentUser: updatedCurrent,
@@ -127,8 +139,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       can: (permission: AppPermission) => {
-        const role = get().currentUser.role;
-        return canUserPerform(role, permission);
+        const current = get().currentUser;
+        if (!current) return true; // Default open access before configuring specific RBAC users
+        return canUserPerform(current.role, permission);
       },
 
       logout: () => {
@@ -140,7 +153,22 @@ export const useAuthStore = create<AuthState>()(
       storage: {
         getItem: (name) => {
           const str = safeStorage.getItem(name);
-          return str ? JSON.parse(str) : null;
+          if (!str) return null;
+          try {
+            const parsed = JSON.parse(str);
+            if (parsed?.state?.users) {
+              parsed.state.users = filterLegacyPresets(parsed.state.users);
+              if (
+                parsed.state.currentUser &&
+                !parsed.state.users.some((u: User) => u.id === parsed.state.currentUser?.id)
+              ) {
+                parsed.state.currentUser = parsed.state.users[0] || null;
+              }
+            }
+            return parsed;
+          } catch {
+            return null;
+          }
         },
         setItem: (name, value) => safeStorage.setItem(name, JSON.stringify(value)),
         removeItem: (name) => safeStorage.removeItem(name),

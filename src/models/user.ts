@@ -21,19 +21,19 @@ export const COMMON_EXAM_POSTS = [
   'Chief Controller',
 ] as const;
 
-export function getUserDisplayName(user: { name: string }): string {
-  if (!user || !user.name) return 'Unknown User';
+export function getUserDisplayName(user?: { name?: string } | null): string {
+  if (!user || !user.name || user.name.trim().length === 0) return 'Unassigned';
   // Strip trailing (Post) if present in the legacy preset name format
   return user.name.replace(/\s*\([^)]*\)$/, '').trim();
 }
 
-export function getUserPost(user: { name: string; post?: string; role: UserRole }): string {
-  if (!user) return 'Staff';
+export function getUserPost(user?: { name?: string; post?: string; role?: UserRole } | null): string {
+  if (!user) return 'Not Set';
   if (user.post && user.post.trim().length > 0) {
     return user.post.trim();
   }
   // Try extracting from name format "Name (Post)"
-  const match = user.name.match(/\(([^)]+)\)$/);
+  const match = user.name?.match(/\(([^)]+)\)$/);
   if (match && match[1]) {
     return match[1].trim();
   }
@@ -99,29 +99,8 @@ export function canUserPerform(role: UserRole, permission: AppPermission): boole
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
-export const PRESET_USERS: User[] = [
-  {
-    id: 'user-admin-1',
-    name: 'Dr. Evelyn Reed (Chief Controller)',
-    email: 'controller@institution.edu',
-    role: 'admin',
-    post: 'Chief Controller',
-    department: 'Examination Cell',
-  },
-  {
-    id: 'user-coord-1',
-    name: 'Prof. Marcus Vance (Exam Coordinator)',
-    email: 'coordinator@institution.edu',
-    role: 'coordinator',
-    post: 'Exam Coordinator',
-    department: 'Computer Science',
-  },
-  {
-    id: 'user-invig-1',
-    name: 'Dr. Sarah Jenkins (Hall Invigilator)',
-    email: 'invigilator@institution.edu',
-    role: 'invigilator',
-    post: 'Hall Invigilator',
-    department: 'Electronics & Communication',
-  },
-];
+/**
+ * Clean initial users list: No pre-populated dummy names.
+ * Academic institutions configure real examination officials, coordinators, and invigilators per session.
+ */
+export const PRESET_USERS: User[] = [];

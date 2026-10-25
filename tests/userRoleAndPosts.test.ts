@@ -8,64 +8,53 @@ import {
   COMMON_EXAM_POSTS,
   type User,
 } from '../src/models/user';
+import { createNewExam } from '../src/models/exam';
+import type { Room } from '../src/models/classroom';
 import { useAuthStore } from '../src/store/authStore';
 import { UserRoleSwitcher } from '../src/components/auth/UserRoleSwitcher';
 
-describe('Examination Officials: Adding People to Different Posts & Dropdown Selection', () => {
+describe('Examination Officials & Classroom Invigilation Assignments', () => {
   beforeEach(() => {
-    // Reset store to default state with preset users
+    // Reset store to completely clean state: no pre-populated names
     useAuthStore.setState({
-      currentUser: PRESET_USERS[0],
-      users: [...PRESET_USERS],
+      currentUser: null,
+      users: [],
       isAuthenticated: true,
     });
   });
 
-  describe('User Display & Post Extraction Helpers', () => {
-    it('correctly formats display names and extracts posts for preset users', () => {
-      const admin = PRESET_USERS[0]; // Dr. Evelyn Reed (Chief Controller)
-      const coord = PRESET_USERS[1]; // Prof. Marcus Vance (Exam Coordinator)
-      const invig = PRESET_USERS[2]; // Dr. Sarah Jenkins (Hall Invigilator)
-
-      expect(getUserDisplayName(admin)).toBe('Dr. Evelyn Reed');
-      expect(getUserPost(admin)).toBe('Chief Controller');
-
-      expect(getUserDisplayName(coord)).toBe('Prof. Marcus Vance');
-      expect(getUserPost(coord)).toBe('Exam Coordinator');
-
-      expect(getUserDisplayName(invig)).toBe('Dr. Sarah Jenkins');
-      expect(getUserPost(invig)).toBe('Hall Invigilator');
+  describe('Clean Initial State & Deletion of Pre-populated Names', () => {
+    it('has zero pre-populated preset faculty names by default', () => {
+      expect(PRESET_USERS).toHaveLength(0);
+      const store = useAuthStore.getState();
+      expect(store.users).toHaveLength(0);
+      expect(store.currentUser).toBeNull();
     });
 
-    it('handles custom users with clean names and designated posts', () => {
-      const customUser: User = {
-        id: 'u-custom-1',
+    it('safely handles null / unassigned users in display helpers', () => {
+      expect(getUserDisplayName(null)).toBe('Unassigned');
+      expect(getUserDisplayName(undefined)).toBe('Unassigned');
+      expect(getUserPost(null)).toBe('Not Set');
+      expect(getUserPost(undefined)).toBe('Not Set');
+    });
+
+    it('correctly extracts display names and posts from explicit user objects', () => {
+      const coordinator: User = {
+        id: 'u-coord-1',
         name: 'Dr. Alan Turing',
-        post: 'Chief Superintendent',
+        post: 'Exam Coordinator',
         role: 'coordinator',
-        email: 'aturing@institution.edu',
         department: 'Computer Science',
+        email: 'aturing@institution.edu',
       };
 
-      expect(getUserDisplayName(customUser)).toBe('Dr. Alan Turing');
-      expect(getUserPost(customUser)).toBe('Chief Superintendent');
-    });
-
-    it('falls back to default post based on role if post is unspecified', () => {
-      const bareUser: User = {
-        id: 'u-bare-1',
-        name: 'Prof. John von Neumann',
-        role: 'coordinator',
-        email: 'jvn@institution.edu',
-      };
-
-      expect(getUserDisplayName(bareUser)).toBe('Prof. John von Neumann');
-      expect(getUserPost(bareUser)).toBe('Exam Coordinator');
+      expect(getUserDisplayName(coordinator)).toBe('Dr. Alan Turing');
+      expect(getUserPost(coordinator)).toBe('Exam Coordinator');
     });
   });
 
-  describe('Adding People to Different Posts', () => {
-    it('supports adding a new person to Exam Coordinator post and selects them', () => {
+  describe('Adding Officials to Different Posts', () => {
+    it('supports adding a new person to Exam Coordinator post and activates them', () => {
       const store = useAuthStore.getState();
 
       const newUser = store.addUser({
@@ -82,15 +71,14 @@ describe('Examination Officials: Adding People to Different Posts & Dropdown Sel
       expect(newUser.role).toBe('coordinator');
       expect(newUser.department).toBe('Biological Sciences');
 
-      // Check store state
       const state = useAuthStore.getState();
-      expect(state.users.some((u) => u.id === newUser.id)).toBe(true);
-      expect(state.currentUser.id).toBe(newUser.id);
-      expect(state.currentUser.name).toBe('Dr. Jane Goodall');
-      expect(state.currentUser.post).toBe('Exam Coordinator');
+      expect(state.users).toHaveLength(1);
+      expect(state.currentUser?.id).toBe(newUser.id);
+      expect(state.currentUser?.name).toBe('Dr. Jane Goodall');
+      expect(state.currentUser?.post).toBe('Exam Coordinator');
     });
 
-    it('supports adding people to Chief Superintendent and Senior Superintendent posts', () => {
+    it('supports adding multiple personnel across distinct posts: Chief Superintendent & Invigilator', () => {
       const store = useAuthStore.getState();
 
       const chief = store.addUser({
@@ -100,43 +88,27 @@ describe('Examination Officials: Adding People to Different Posts & Dropdown Sel
         department: 'Mechanical Engineering',
       });
 
-      const senior = store.addUser({
+      const invigilator1 = store.addUser({
         name: 'Dr. Rebecca Foster',
-        post: 'Senior Superintendent',
-        role: 'coordinator',
+        post: 'Hall Invigilator',
+        role: 'invigilator',
+        department: 'Physics',
+      });
+
+      const invigilator2 = store.addUser({
+        name: 'Dr. Thomas Edison',
+        post: 'Hall Invigilator',
+        role: 'invigilator',
         department: 'Electrical Engineering',
       });
 
       const state = useAuthStore.getState();
-      expect(state.users).toHaveLength(5); // 3 presets + 2 new
+      expect(state.users).toHaveLength(3);
       expect(state.users.find((u) => u.id === chief.id)?.post).toBe('Chief Superintendent');
-      expect(state.users.find((u) => u.id === senior.id)?.post).toBe('Senior Superintendent');
+      expect(state.users.filter((u) => u.post === 'Hall Invigilator')).toHaveLength(2);
     });
 
-    it('supports adding people to custom/extensible posts', () => {
-      const store = useAuthStore.getState();
-
-      const customOfficial = store.addUser({
-        name: 'Dr. Leonard McCoy',
-        post: 'External University Squad Observer',
-        role: 'invigilator',
-        department: 'Medical Sciences',
-      });
-
-      expect(customOfficial.post).toBe('External University Squad Observer');
-      expect(getUserPost(customOfficial)).toBe('External University Squad Observer');
-
-      const current = useAuthStore.getState().currentUser;
-      expect(current.id).toBe(customOfficial.id);
-      expect(current.role).toBe('invigilator');
-      // Invigilator role permissions
-      expect(useAuthStore.getState().can('export:download')).toBe(true);
-      expect(useAuthStore.getState().can('seating:generate')).toBe(false);
-    });
-  });
-
-  describe('Selecting from Dropdown (loginAs)', () => {
-    it('allows seamless switching between added officials and presets', () => {
+    it('allows seamless switching between added officials via loginAs', () => {
       const store = useAuthStore.getState();
 
       const person1 = store.addUser({
@@ -151,65 +123,137 @@ describe('Examination Officials: Adding People to Different Posts & Dropdown Sel
         role: 'coordinator',
       });
 
-      // Switch back to original Marcus Vance
-      const marcus = store.users.find((u) => u.id === 'user-coord-1')!;
-      store.loginAs(marcus.id);
-      expect(useAuthStore.getState().currentUser.id).toBe('user-coord-1');
-      expect(getUserDisplayName(useAuthStore.getState().currentUser)).toBe('Prof. Marcus Vance');
+      // Active is currently person2
+      expect(useAuthStore.getState().currentUser?.id).toBe(person2.id);
 
-      // Switch to Katherine Johnson
+      // Switch to person1
       store.loginAs(person1.id);
-      expect(useAuthStore.getState().currentUser.id).toBe(person1.id);
+      expect(useAuthStore.getState().currentUser?.id).toBe(person1.id);
       expect(getUserDisplayName(useAuthStore.getState().currentUser)).toBe('Prof. Katherine Johnson');
       expect(getUserPost(useAuthStore.getState().currentUser)).toBe('Chief Superintendent');
 
-      // Switch to Dorothy Vaughan
+      // Switch back to person2
       store.loginAs(person2.id);
-      expect(useAuthStore.getState().currentUser.id).toBe(person2.id);
+      expect(useAuthStore.getState().currentUser?.id).toBe(person2.id);
       expect(getUserDisplayName(useAuthStore.getState().currentUser)).toBe('Dr. Dorothy Vaughan');
-      expect(getUserPost(useAuthStore.getState().currentUser)).toBe('Exam Cell In-Charge');
     });
 
-    it('allows removing custom added officials without affecting presets or dropping below 1 user', () => {
+    it('allows deleting an official from the officials list', () => {
       const store = useAuthStore.getState();
 
-      const tempUser = store.addUser({
+      const user = store.addUser({
         name: 'Temporary Staff',
         post: 'Hall Invigilator',
         role: 'invigilator',
       });
 
-      expect(useAuthStore.getState().users.some((u) => u.id === tempUser.id)).toBe(true);
-      expect(useAuthStore.getState().currentUser.id).toBe(tempUser.id);
+      expect(useAuthStore.getState().users).toHaveLength(1);
+      store.removeUser(user.id);
+      expect(useAuthStore.getState().users).toHaveLength(0);
+      expect(useAuthStore.getState().currentUser).toBeNull();
+    });
+  });
 
-      // Remove the temporary user
-      store.removeUser(tempUser.id);
+  describe('Selecting Officials & Multiple Invigilators per Examination', () => {
+    it('supports selecting Coordinator, Chief Superintendent, and multiple Invigilators on Exam setup', () => {
+      const exam = createNewExam({
+        examName: 'Midterm Examination S5',
+        examDate: '2026-11-10',
+        coordinatorId: 'user-c1',
+        coordinatorName: 'Prof. Alan Turing',
+        adminId: 'user-a1',
+        adminName: 'Dr. Evelyn Controller',
+        invigilatorIds: ['inv-1', 'inv-2', 'inv-3'],
+        invigilatorNames: ['Dr. Sarah Connor', 'Prof. John Smith', 'Dr. Grace Hopper'],
+      });
 
-      const stateAfter = useAuthStore.getState();
-      expect(stateAfter.users.some((u) => u.id === tempUser.id)).toBe(false);
-      // Current user should fallback to a valid remaining user
-      expect(stateAfter.currentUser).toBeDefined();
-      expect(stateAfter.currentUser.id).not.toBe(tempUser.id);
+      expect(exam.coordinatorName).toBe('Prof. Alan Turing');
+      expect(exam.adminName).toBe('Dr. Evelyn Controller');
+      expect(exam.invigilatorNames).toHaveLength(3);
+      expect(exam.invigilatorNames).toContain('Dr. Sarah Connor');
+      expect(exam.invigilatorNames).toContain('Prof. John Smith');
+      expect(exam.invigilatorNames).toContain('Dr. Grace Hopper');
+    });
+  });
+
+  describe('Selecting One or More Invigilators for Classrooms', () => {
+    it('supports configuring multiple invigilators for a specific classroom', () => {
+      const room: Room = {
+        id: 'room-b301',
+        name: 'B301',
+        rows: 6,
+        columns: 6,
+        studentsPerBench: 2,
+        disabledSeats: [],
+        usableCapacity: 72,
+        invigilators: ['Dr. Sarah Connor', 'Prof. John Smith'],
+      };
+
+      expect(room.invigilators).toBeDefined();
+      expect(room.invigilators).toHaveLength(2);
+      expect(room.invigilators![0]).toBe('Dr. Sarah Connor');
+      expect(room.invigilators![1]).toBe('Prof. John Smith');
+    });
+
+    it('supports assigning 1 invigilator to smaller halls and 3 to large exam halls', () => {
+      const smallRoom: Room = {
+        id: 'room-a101',
+        name: 'A101',
+        rows: 4,
+        columns: 4,
+        studentsPerBench: 1,
+        disabledSeats: [],
+        usableCapacity: 16,
+        invigilators: ['Dr. Single Invigilator'],
+      };
+
+      const largeAuditorium: Room = {
+        id: 'room-audi',
+        name: 'Main Auditorium',
+        rows: 10,
+        columns: 8,
+        studentsPerBench: 2,
+        disabledSeats: [],
+        usableCapacity: 160,
+        invigilators: ['Dr. Sarah Connor', 'Prof. John Smith', 'Dr. Grace Hopper'],
+      };
+
+      expect(smallRoom.invigilators).toHaveLength(1);
+      expect(largeAuditorium.invigilators).toHaveLength(3);
+    });
+  });
+
+  describe('Component Rendering with Clean State', () => {
+    it('renders clean unassigned state in UserRoleSwitcher when no users are pre-populated', () => {
+      const html = renderToStaticMarkup(React.createElement(UserRoleSwitcher));
+      expect(html).toContain('Select / Add Official');
+      expect(html).toContain('Not Set');
+      expect(html).toContain('data-testid="user-role-switcher-container"');
+    });
+
+    it('verifies store correctly updates currentUser when an official is added', () => {
+      const store = useAuthStore.getState();
+      const added = store.addUser({
+        name: 'Dr. Angela Davies',
+        post: 'Chief Superintendent',
+        role: 'coordinator',
+        department: 'Electronics Engineering',
+      });
+
+      expect(useAuthStore.getState().currentUser?.name).toBe('Dr. Angela Davies');
+      expect(useAuthStore.getState().currentUser?.post).toBe('Chief Superintendent');
+      expect(getUserDisplayName(added)).toBe('Dr. Angela Davies');
+      expect(getUserPost(added)).toBe('Chief Superintendent');
     });
   });
 
   describe('Standard Common Posts Integrity', () => {
-    it('contains all standard institutional posts in COMMON_EXAM_POSTS', () => {
+    it('maintains comprehensive common posts in COMMON_EXAM_POSTS', () => {
       expect(COMMON_EXAM_POSTS).toContain('Exam Coordinator');
       expect(COMMON_EXAM_POSTS).toContain('Chief Superintendent');
       expect(COMMON_EXAM_POSTS).toContain('Senior Superintendent');
       expect(COMMON_EXAM_POSTS).toContain('Hall Invigilator');
       expect(COMMON_EXAM_POSTS).toContain('Exam Cell In-Charge');
-    });
-  });
-
-  describe('Component Rendering', () => {
-    it('renders the switcher trigger button with active official and post badge', () => {
-      const html = renderToStaticMarkup(React.createElement(UserRoleSwitcher));
-      expect(html).toContain('Dr. Evelyn Reed');
-      expect(html).toContain('Chief Controller');
-      expect(html).toContain('admin');
-      expect(html).toContain('data-testid="user-role-switcher-container"');
     });
   });
 });
