@@ -341,41 +341,45 @@ export function generateAttendanceSheet2Pdf(
 
 /**
  * Builds Output C (Seating Notice Sheet) PDF (Strictly Monochrome Black & White)
+ * Packs as many classrooms as possible on a single sheet using available free space,
+ * moving to the next page only when whole room details cannot fit.
  */
 export function generateSeatingNoticePdf(
   exam: Exam | ExamDetails,
   rooms: Room[],
   assignments: AssignedSeat[],
-  students: ExamCandidate[]
+  students: ExamCandidate[],
+  targetRoomId?: string
 ): jsPDF {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const studentMap = new Map(students.map((s) => [s.id, s]));
-  let isFirst = true;
+  const activeRooms = targetRoomId ? rooms.filter((r) => r.id === targetRoomId) : rooms;
 
-  rooms.forEach((room) => {
+  type CohortGroup = {
+    branch: string;
+    semester: string;
+    subjectCode: string;
+    regNumbers: string[];
+    rangeText: string;
+    splitText: string[];
+    height: number;
+  };
+
+  type RoomData = {
+    room: Room;
+    assignments: AssignedSeat[];
+    cohorts: CohortGroup[];
+    totalHeight: number;
+  };
+
+  const preparedRooms: RoomData[] = [];
+
+  activeRooms.forEach((room) => {
     const roomAssignments = assignments.filter(
       (a) => a.roomId === room.id || a.classroomId === room.id
     );
     if (roomAssignments.length === 0) return;
 
-    if (!isFirst) pdf.addPage('a4', 'portrait');
-    isFirst = false;
-
-    addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', room.name, false);
-
-    // Large Hall Box - Monochrome
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setFillColor(255, 255, 255);
-    pdf.setLineWidth(0.6);
-    pdf.rect(10, 37, 190, 14, 'S');
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text(`EXAMINATION HALL: ${room.name}`, 105, 46.5, { align: 'center' });
-
-    // Cohorts grouping
-    type CohortGroup = { branch: string; semester: string; subjectCode: string; regNumbers: string[] };
     const cohortMap = new Map<string, CohortGroup>();
     roomAssignments.forEach((a) => {
       const studentId = a.studentId || a.candidateId;
@@ -390,50 +394,172 @@ export function generateSeatingNoticePdf(
         semester,
         subjectCode,
         regNumbers: [],
+        rangeText: '',
+        splitText: [],
+        height: 0,
       };
       cohort.regNumbers.push(c.registerNumber);
       cohortMap.set(key, cohort);
     });
 
-    let y = 58;
+    const cohorts = Array.from(cohortMap.values()).sort(
+      (a, b) =>
+        a.branch.localeCompare(b.branch) ||
+        a.semester.localeCompare(b.semester) ||
+        a.subjectCode.localeCompare(b.subjectCode)
+    );
+
+    cohorts.forEach((cohort) => {
+      cohort.rangeText = formatRegisterRange(cohort.regNumbers);
+      pdf.setFontSize(9.5);
+      cohort.splitText = pdf.splitTextToSize(cohort.rangeText, 105);
+      cohort.height = Math.max(9, cohort.splitText.length * 4.6 + 3);
+    });
+
+    // Room total height:
+    // Hall Banner: 14mm
+    // Table Header: 6mm
+    // Cohort Rows: sum(cohort.height + 1.5mm)
+    // Margin below room: 5mm
+    const cohortsHeight = cohorts.reduce((acc, c) => acc + c.height + 1.5, 0);
+    const totalHeight = 25 + cohortsHeight;
+
+    preparedRooms.push({
+      room,
+      assignments: roomAssignments,
+      cohorts,
+      totalHeight,
+    });
+  });
+
+  if (preparedRooms.length === 0) {
+    addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', undefined, false);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.text('No seating allocations available for the selected room(s).', 105, 50, { align: 'center' });
+    return pdf;
+  }
+
+  const startY = 36;
+  const maxY = 255; // Leave clean clearance for footer at 283
+  let currentY = startY;
+  let isFirstPage = true;
+
+  const drawRoomBlock = (roomData: RoomData) => {
+    const { room, assignments: roomAssignments, cohorts } = roomData;
+
+    // 1. Hall Banner Box - Strictly Monochrome
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setFillColor(255, 255, 255);
+    pdf.setLineWidth(0.5);
+    pdf.rect(10, currentY, 190, 11, 'S');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`EXAMINATION HALL: ${room.name.toUpperCase()}`, 14, currentY + 7.5);
+
+    pdf.setFontSize(9.5);
+    pdf.text(`Total Seated: ${roomAssignments.length} Candidates`, 196, currentY + 7.5, { align: 'right' });
+
+    currentY += 14;
+
+    // 2. Table Header
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Branch', 12, y);
-    pdf.text('Sem', 34, y);
-    pdf.text('Course Code', 48, y);
-    pdf.text('Allocated Register Numbers (Notice Board Display)', 78, y);
-    pdf.text('Count', 196, y, { align: 'right' });
+    pdf.text('Branch', 12, currentY + 3);
+    pdf.text('Sem', 34, currentY + 3);
+    pdf.text('Course Code', 48, currentY + 3);
+    pdf.text('Allocated Register Numbers (Notice Board Display)', 78, currentY + 3);
+    pdf.text('Count', 196, currentY + 3, { align: 'right' });
 
     pdf.setLineWidth(0.4);
     pdf.setDrawColor(0, 0, 0);
-    pdf.line(10, y + 2.5, 200, y + 2.5);
-    y += 7;
+    pdf.line(10, currentY + 5, 200, currentY + 5);
+    currentY += 6;
 
-    Array.from(cohortMap.values()).forEach((cohort) => {
-      const rangeText = formatRegisterRange(cohort.regNumbers);
+    // 3. Cohort Rows
+    cohorts.forEach((cohort) => {
+      // If a single room has so many cohorts that it overflows the page:
+      if (currentY + cohort.height > maxY) {
+        pdf.addPage('a4', 'portrait');
+        currentY = startY;
+        addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', `${room.name} (Contd.)`, false);
+
+        // Re-draw table header on continuation page
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Branch', 12, currentY + 3);
+        pdf.text('Sem', 34, currentY + 3);
+        pdf.text('Course Code', 48, currentY + 3);
+        pdf.text('Allocated Register Numbers (Notice Board Display)', 78, currentY + 3);
+        pdf.text('Count', 196, currentY + 3, { align: 'right' });
+
+        pdf.setLineWidth(0.4);
+        pdf.setDrawColor(0, 0, 0);
+        pdf.line(10, currentY + 5, 200, currentY + 5);
+        currentY += 6;
+      }
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(cohort.branch, 12, y + 4);
-      pdf.text(cohort.semester, 34, y + 4);
-      pdf.text(cohort.subjectCode, 48, y + 4);
+      pdf.text(cohort.branch, 12, currentY + 4);
+      pdf.text(cohort.semester, 34, currentY + 4);
+      pdf.text(cohort.subjectCode, 48, currentY + 4);
 
       // Large notice font for register numbers with text wrap calculation
       pdf.setFontSize(9.5);
-      const splitText = pdf.splitTextToSize(rangeText, 105);
-      pdf.text(splitText, 78, y + 4);
-      pdf.text(String(cohort.regNumbers.length), 196, y + 4, { align: 'right' });
+      pdf.text(cohort.splitText, 78, currentY + 4);
+      pdf.text(String(cohort.regNumbers.length), 196, currentY + 4, { align: 'right' });
 
-      const cohortHeight = Math.max(10, splitText.length * 5 + 4);
-      y += cohortHeight;
+      currentY += cohort.height;
 
       pdf.setDrawColor(0, 0, 0);
-      pdf.line(10, y, 200, y);
-      y += 4;
+      pdf.line(10, currentY, 200, currentY);
+      currentY += 1.5;
     });
+
+    // Space after room block
+    currentY += 5;
+  };
+
+  preparedRooms.forEach((roomData) => {
+    if (isFirstPage) {
+      addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', undefined, false);
+      isFirstPage = false;
+      drawRoomBlock(roomData);
+    } else {
+      // Check if the WHOLE details of another hall can fit in the free space below
+      if (currentY + roomData.totalHeight <= maxY) {
+        // Fits on the same sheet! Utilize the free space below
+        drawRoomBlock(roomData);
+      } else {
+        // Not enough space to put the whole details of another hall! Go to next page!
+        pdf.addPage('a4', 'portrait');
+        currentY = startY;
+        addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', undefined, false);
+        drawRoomBlock(roomData);
+      }
+    }
   });
+
+  // Stamp clean page numbers and notice footer across all generated pages
+  const totalPages = pdf.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    pdf.setPage(p);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+    pdf.line(10, 283, 200, 283);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Official Campus Notice Board Copy • Candidates must occupy designated seats 15 mins prior', 10, 287.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Page ${p} of ${totalPages}`, 200, 287.5, { align: 'right' });
+  }
 
   return pdf;
 }

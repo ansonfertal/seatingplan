@@ -110,7 +110,7 @@ export const ExportScreen: React.FC = () => {
       const pdf = generateAttendanceSheet2Pdf(exam, classrooms, currentAssignments, students);
       downloadGeneratedPdf(pdf, `Attendance_Sheet_2_${examCleanName}_${examDate}.pdf`);
     } else if (activeTab === 'seating_notice') {
-      const pdf = generateSeatingNoticePdf(exam, classrooms, currentAssignments, students);
+      const pdf = generateSeatingNoticePdf(exam, classrooms, currentAssignments, students, effectiveRoomId);
       downloadGeneratedPdf(pdf, `Seating_Notice_${examCleanName}_${examDate}.pdf`);
     } else if (activeTab === 'room_seating_plan') {
       const pdf = generateRoomSeatingPlanPdf(exam, classrooms, currentAssignments, students);
