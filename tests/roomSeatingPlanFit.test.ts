@@ -160,4 +160,42 @@ describe('Room Seating Plan Sheet Single-Sheet Fit Verification', () => {
     expect(html).toContain('HALL: HALL 5X4');
     expect(html).not.toContain('HALL: HALL 4X3');
   });
+
+  it('renders prominent, readable register number fonts across room densities', () => {
+    // Standard room (<=5 rows) uses text-sm sm:text-base font-black
+    const standard = createRoomWithAssignments(5, 4, 2);
+    const standardHtml = renderToStaticMarkup(
+      React.createElement(RoomSeatingPlanSheet, {
+        exam: sampleExam,
+        rooms: [standard.room],
+        assignments: standard.assignments,
+        students: standard.candidates,
+      })
+    );
+    expect(standardHtml).toContain('text-sm sm:text-base');
+
+    // Dense room (6-8 rows) uses text-xs sm:text-[13.5px] font-black
+    const dense = createRoomWithAssignments(8, 5, 2);
+    const denseHtml = renderToStaticMarkup(
+      React.createElement(RoomSeatingPlanSheet, {
+        exam: sampleExam,
+        rooms: [dense.room],
+        assignments: dense.assignments,
+        students: dense.candidates,
+      })
+    );
+    expect(denseHtml).toContain('text-xs sm:text-[13.5px]');
+
+    // Very dense room (>8 rows) uses text-[11px] sm:text-xs font-black
+    const veryDense = createRoomWithAssignments(10, 5, 2);
+    const veryDenseHtml = renderToStaticMarkup(
+      React.createElement(RoomSeatingPlanSheet, {
+        exam: sampleExam,
+        rooms: [veryDense.room],
+        assignments: veryDense.assignments,
+        students: veryDense.candidates,
+      })
+    );
+    expect(veryDenseHtml).toContain('text-[11px] sm:text-xs');
+  });
 });

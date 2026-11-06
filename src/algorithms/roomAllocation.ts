@@ -21,7 +21,75 @@ export type RoomAllocationOptions = {
   examDate?: string;
   minimizeClassroomsUsed?: boolean;
   differentArrangementPerDate?: boolean;
+  equalStudentDistribution?: boolean;
 };
+
+/**
+ * Calculates balanced student quotas across classrooms so headcounts are as equal as possible.
+ * Satisfies:
+ * 1. 0 <= quota_i <= capacity_i for all rooms
+ * 2. sum(quotas) == min(totalStudents, sum(capacities))
+ * 3. The difference between quotas of any two unconstrained rooms is at most 1.
+ */
+export function computeEqualRoomQuotas(
+  rooms: { id: string; capacity: number }[],
+  totalStudents: number
+): Map<string, number> {
+  const quotas = new Map<string, number>();
+  if (rooms.length === 0 || totalStudents <= 0) {
+    rooms.forEach((r) => quotas.set(r.id, 0));
+    return quotas;
+  }
+
+  const totalCap = rooms.reduce((sum, r) => sum + Math.max(0, r.capacity), 0);
+  let remainingStudents = Math.min(totalStudents, totalCap);
+
+  // Initialize all quotas to 0
+  rooms.forEach((r) => quotas.set(r.id, 0));
+
+  // Filter active rooms with capacity > 0
+  let activeRooms = rooms
+    .filter((r) => r.capacity > 0)
+    .map((r) => ({ id: r.id, capacity: r.capacity }));
+
+  while (remainingStudents > 0 && activeRooms.length > 0) {
+    const fairShare = Math.floor(remainingStudents / activeRooms.length);
+
+    // Identify rooms whose remaining capacity is <= fairShare (capacity bottlenecks)
+    const bottleneckIndices = activeRooms
+      .map((r, idx) => ({ idx, remainingCap: r.capacity - (quotas.get(r.id) || 0) }))
+      .filter((x) => x.remainingCap <= fairShare);
+
+    if (bottleneckIndices.length > 0) {
+      // Allocate their full remaining capacity and remove from active
+      bottleneckIndices.sort((a, b) => a.remainingCap - b.remainingCap);
+
+      const removedIds = new Set<string>();
+      for (const b of bottleneckIndices) {
+        const room = activeRooms[b.idx];
+        const currentQuota = quotas.get(room.id) || 0;
+        const roomRemaining = room.capacity - currentQuota;
+        quotas.set(room.id, currentQuota + roomRemaining);
+        remainingStudents -= roomRemaining;
+        removedIds.add(room.id);
+      }
+      activeRooms = activeRooms.filter((r) => !removedIds.has(r.id));
+    } else {
+      // All remaining active rooms have room for at least fairShare
+      const remainder = remainingStudents % activeRooms.length;
+      for (let i = 0; i < activeRooms.length; i++) {
+        const room = activeRooms[i];
+        const extra = i < remainder ? 1 : 0;
+        const currentQuota = quotas.get(room.id) || 0;
+        quotas.set(room.id, currentQuota + fairShare + extra);
+      }
+      remainingStudents = 0;
+      break;
+    }
+  }
+
+  return quotas;
+}
 
 export function hashExamDate(dateStr?: string): number {
   if (!dateStr) return 0;
@@ -178,6 +246,7 @@ export function allocateStudentsToRooms(
 ): RoomAllocationResult {
   const minimizeClassrooms = options.minimizeClassroomsUsed ?? true;
   const differentArrangement = options.differentArrangementPerDate ?? true;
+  const equalDistribution = options.equalStudentDistribution ?? false;
   const examDate = options.examDate;
 
   // Filter active rooms with capacity > 0
@@ -239,6 +308,23 @@ export function allocateStudentsToRooms(
     };
   });
 
+  // Target rooms for equal headcount calculation
+  const targetRooms = (minimizeClassrooms && selectedMinimalRoomIds.size > 0)
+    ? roomEntries.filter((r) => selectedMinimalRoomIds.has(r.classroomId))
+    : roomEntries;
+
+  const quotaMap = equalDistribution
+    ? computeEqualRoomQuotas(
+        targetRooms.map((r) => ({ id: r.classroomId, capacity: r.capacity })),
+        students.length
+      )
+    : new Map<string, number>();
+
+  const getTargetMax = (roomId: string, capacity: number): number => {
+    if (!equalDistribution) return capacity;
+    return quotaMap.get(roomId) ?? 0;
+  };
+
   // Group candidates into cohorts by SubjectCode + Branch + Semester
   const cohortsMap = new Map<string, (Student | ExamCandidate)[]>();
   students.forEach((student) => {
@@ -279,17 +365,48 @@ export function allocateStudentsToRooms(
 
     interleavedStudents.forEach((student) => {
       const branchKey = normalizeCode(student.branch);
-      // Prefer the earliest minimal selected room that has available capacity AND same-branch < benchCount
+      // 1. Prefer minimal selected room within target quota AND same-branch < benchCount
       let targetRoom = roomEntries.find(
-        (r) => r.isMinimalSelected && r.studentIds.length < r.capacity && (r.branchCounts[branchKey] ?? 0) < r.benchCount
+        (r) =>
+          r.isMinimalSelected &&
+          r.studentIds.length < getTargetMax(r.classroomId, r.capacity) &&
+          (r.branchCounts[branchKey] ?? 0) < r.benchCount
       );
-      // Fallback within minimal selected rooms
+      // 2. Fallback within minimal selected rooms within target quota
+      if (!targetRoom) {
+        targetRoom = roomEntries.find(
+          (r) =>
+            r.isMinimalSelected &&
+            r.studentIds.length < getTargetMax(r.classroomId, r.capacity)
+        );
+      }
+      // 3. Fallback within any active room within target quota (if all rooms active)
+      if (!targetRoom && equalDistribution) {
+        targetRoom = roomEntries.find(
+          (r) =>
+            r.studentIds.length < getTargetMax(r.classroomId, r.capacity) &&
+            (r.branchCounts[branchKey] ?? 0) < r.benchCount
+        );
+        if (!targetRoom) {
+          targetRoom = roomEntries.find(
+            (r) => r.studentIds.length < getTargetMax(r.classroomId, r.capacity)
+          );
+        }
+      }
+      // 4. Safety fallback: if quotas were too strict for branch constraints, expand up to physical capacity
+      if (!targetRoom) {
+        targetRoom = roomEntries.find(
+          (r) =>
+            r.isMinimalSelected &&
+            r.studentIds.length < r.capacity &&
+            (r.branchCounts[branchKey] ?? 0) < r.benchCount
+        );
+      }
       if (!targetRoom) {
         targetRoom = roomEntries.find(
           (r) => r.isMinimalSelected && r.studentIds.length < r.capacity
         );
       }
-      // Safety fallback: if minimal rooms are exhausted, expand to remaining active rooms
       if (!targetRoom) {
         targetRoom = roomEntries.find(
           (r) => r.studentIds.length < r.capacity && (r.branchCounts[branchKey] ?? 0) < r.benchCount
@@ -307,7 +424,7 @@ export function allocateStudentsToRooms(
       }
     });
   } else {
-    // Balanced Fill: Distribute cohorts across ONLY the minimal selected rooms (or all if minimal disabled)
+    // Balanced Fill: Distribute cohorts across minimal selected rooms (or all if minimal disabled)
     sortedCohorts.forEach(([, cohortStudents]) => {
       const orderedCohort =
         registerNumberOrder === 'sorted'
@@ -316,8 +433,21 @@ export function allocateStudentsToRooms(
 
       orderedCohort.forEach((student) => {
         let eligibleRooms = roomEntries.filter(
-          (r) => r.isMinimalSelected && r.studentIds.length < r.capacity
+          (r) =>
+            r.isMinimalSelected &&
+            r.studentIds.length < getTargetMax(r.classroomId, r.capacity)
         );
+        if (eligibleRooms.length === 0 && equalDistribution) {
+          eligibleRooms = roomEntries.filter(
+            (r) => r.studentIds.length < getTargetMax(r.classroomId, r.capacity)
+          );
+        }
+        // Safety fallback to physical capacity
+        if (eligibleRooms.length === 0) {
+          eligibleRooms = roomEntries.filter(
+            (r) => r.isMinimalSelected && r.studentIds.length < r.capacity
+          );
+        }
         if (eligibleRooms.length === 0) {
           eligibleRooms = roomEntries.filter((r) => r.studentIds.length < r.capacity);
         }
@@ -330,10 +460,12 @@ export function allocateStudentsToRooms(
         let bestScore = Number.POSITIVE_INFINITY;
 
         eligibleRooms.forEach((room) => {
+          const roomLimit = getTargetMax(room.classroomId, room.capacity);
+          const effectiveCap = Math.max(1, roomLimit);
           const subCount = room.subjectCounts[subKey] ?? 0;
           const branchCount = room.branchCounts[branchKey] ?? 0;
-          const remainingSeats = room.capacity - room.studentIds.length;
-          const roomLoadPct = room.studentIds.length / room.capacity;
+          const remainingSeats = effectiveCap - room.studentIds.length;
+          const roomLoadPct = room.studentIds.length / effectiveCap;
 
           const exceedsBenches = branchCount >= room.benchCount ? 50000 : 0;
 

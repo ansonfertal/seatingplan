@@ -20,6 +20,8 @@ export type SeatingRules = {
   registerNumberOrder?: RegisterNumberOrder;
   /** Primary goal: Minimize number of classrooms activated/used */
   minimizeClassroomsUsed?: boolean;
+  /** Distribute students so there is an almost equal number in each active classroom */
+  equalStudentDistribution?: boolean;
   /** Vary room selection and seating arrangement across different exam dates */
   differentArrangementPerDate?: boolean;
 };
@@ -33,6 +35,7 @@ export const DEFAULT_SEATING_RULES: SeatingRules = {
   sameSubjectCodeSeparation: true,
   registerNumberOrder: 'sorted',
   minimizeClassroomsUsed: true,
+  equalStudentDistribution: false,
   differentArrangementPerDate: true,
 };
 

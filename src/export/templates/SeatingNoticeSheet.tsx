@@ -96,9 +96,9 @@ export const SeatingNoticeSheet: React.FC<SeatingNoticeSheetProps> = ({
 
       cohorts.forEach((cohort) => {
         cohort.rangeText = formatRegisterRange(cohort.regNumbers);
-        // Monospace roll numbers column (~78mm width, ~36 chars/line)
-        const lines = Math.max(1, Math.ceil(cohort.rangeText.length / 36));
-        cohort.estimatedHeightMm = 8 + (lines - 1) * 4.5;
+        // Monospace roll numbers column (~105mm width, ~32 chars/line at text-lg)
+        const lines = Math.max(1, Math.ceil(cohort.rangeText.length / 32));
+        cohort.estimatedHeightMm = 9 + (lines - 1) * 5.5;
       });
 
       // Total estimated height for this hall block (banner: ~14mm, table header: ~7mm, rows, gap: ~6mm)
@@ -242,49 +242,49 @@ export const SeatingNoticeSheet: React.FC<SeatingNoticeSheetProps> = ({
                     {/* High-Contrast Roll Number Notice Table - Fixed Layout, Zero Overlap */}
                     <table className="w-full text-left border-2 border-black border-collapse table-fixed bg-white">
                       <colgroup>
-                        <col style={{ width: '16%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '15%' }} />
+                        <col style={{ width: '54%' }} />
                         <col style={{ width: '10%' }} />
-                        <col style={{ width: '18%' }} />
-                        <col style={{ width: '44%' }} />
-                        <col style={{ width: '12%' }} />
                       </colgroup>
                       <thead>
                         <tr className="bg-white text-black border-b-2 border-black">
-                          <th className="py-1.5 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
+                          <th className="py-2 px-2.5 text-xs font-black uppercase tracking-wider text-black border-r border-black">
                             Branch
                           </th>
-                          <th className="py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
+                          <th className="py-2 px-2 text-xs font-black uppercase tracking-wider text-black border-r border-black">
                             Sem
                           </th>
-                          <th className="py-1.5 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
+                          <th className="py-2 px-2.5 text-xs font-black uppercase tracking-wider text-black border-r border-black">
                             Course Code
                           </th>
-                          <th className="py-1.5 px-2.5 text-xs font-bold uppercase tracking-wider text-black border-r border-black">
+                          <th className="py-2 px-3 text-xs font-black uppercase tracking-wider text-black border-r border-black">
                             Allocated Register Number Range(s)
                           </th>
-                          <th className="py-1.5 px-2.5 text-xs font-bold uppercase tracking-wider text-center text-black">
+                          <th className="py-2 px-2.5 text-xs font-black uppercase tracking-wider text-center text-black">
                             Count
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {cohorts.map((cohort, idx) => (
-                          <tr key={idx} className="border-b border-black bg-white">
-                            <td className="py-1.5 px-2.5 font-bold text-sm text-black border-r border-black truncate">
+                          <tr key={idx} className="border-b border-black bg-white last:border-b-0">
+                            <td className="py-2 px-2.5 font-bold text-base text-black border-r border-black truncate">
                               {cohort.branch}
                             </td>
-                            <td className="py-1.5 px-2 font-bold text-sm text-black border-r border-black truncate">
+                            <td className="py-2 px-2 font-bold text-base text-black border-r border-black truncate">
                               {cohort.semester}
                             </td>
-                            <td className="py-1.5 px-2.5 font-mono font-bold text-sm text-black border-r border-black truncate">
+                            <td className="py-2 px-2.5 font-mono font-bold text-base text-black border-r border-black truncate">
                               {cohort.subjectCode}
                             </td>
-                            <td className="py-1.5 px-3 border-r border-black break-words">
-                              <p className="font-mono text-sm sm:text-base font-bold tracking-wide text-black leading-snug">
+                            <td className="py-2 px-3 border-r border-black break-words bg-slate-50/10">
+                              <p className="font-mono text-lg sm:text-xl font-black tracking-wide text-black leading-snug">
                                 {cohort.rangeText}
                               </p>
                             </td>
-                            <td className="py-1.5 px-2.5 text-center font-bold text-base text-black">
+                            <td className="py-2 px-2.5 text-center font-black text-xl text-black">
                               {cohort.regNumbers.length}
                             </td>
                           </tr>

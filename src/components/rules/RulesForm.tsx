@@ -173,6 +173,12 @@ export const RulesForm: React.FC = () => {
               recommended
             />
             <RuleToggle
+              title="Distribute Students Equally Across Classrooms"
+              description="Allocates candidates so each active classroom receives an almost equal headcount (e.g. ~20 students per room across 3 halls instead of 40 in one and 0 in another), preventing crowded rooms while keeping invigilation workloads balanced."
+              isActive={rules.equalStudentDistribution ?? false}
+              onToggle={() => handleToggle('equalStudentDistribution')}
+            />
+            <RuleToggle
               title="Vary Seating Arrangement by Exam Date (Anti-Cheating)"
               description="Automatically rotates classroom selection, bench traversal, and companion pairing for each exam date so candidates sit in different seats and next to different peers across consecutive exam papers."
               isActive={rules.differentArrangementPerDate ?? true}

@@ -24,6 +24,7 @@ export type SeatingGenerationOptions = {
   examDate?: string;
   minimizeClassroomsUsed?: boolean;
   differentArrangementPerDate?: boolean;
+  equalStudentDistribution?: boolean;
   onProgress?: (progress: { stage: string; percent: number }) => void;
 };
 
@@ -87,6 +88,8 @@ export function generateConstraintAwareSeating(
     options.minimizeClassroomsUsed ?? rules.minimizeClassroomsUsed ?? true;
   const differentArrangementPerDate =
     options.differentArrangementPerDate ?? rules.differentArrangementPerDate ?? true;
+  const equalStudentDistribution =
+    options.equalStudentDistribution ?? rules.equalStudentDistribution ?? false;
   const dateSalt = examDate && differentArrangementPerDate ? hashExamDate(examDate) : 0;
   const algorithmVersion = '1.2.0-csp';
 
@@ -103,6 +106,7 @@ export function generateConstraintAwareSeating(
       examDate,
       minimizeClassroomsUsed,
       differentArrangementPerDate,
+      equalStudentDistribution,
     }
   );
   const roomMap = new Map(classrooms.map((c) => [c.id, c]));

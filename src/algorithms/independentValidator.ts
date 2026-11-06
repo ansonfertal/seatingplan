@@ -103,7 +103,8 @@ export function validateSeatingPlanIndependently(
     roomList.push(assignment);
     roomAssignmentsMap.set(roomId, roomList);
 
-    if (row < 0 || row >= room.rows || col < 0 || col >= room.columns || pos < 0 || pos >= room.studentsPerBench) {
+    const colMaxRows = room.columnRows?.[col] ?? room.rows;
+    if (row < 0 || row >= colMaxRows || col < 0 || col >= room.columns || pos < 0 || pos >= room.studentsPerBench) {
       violations.push({
         type: 'C5_INVALID_PHYSICAL_SEAT',
         classroomId: roomId,

@@ -211,4 +211,23 @@ describe('Notice Board Display Sheet Multi-Classroom Packing & Pagination', () =
     );
     expect(pdf.getNumberOfPages()).toBe(1);
   });
+
+  it('renders prominent, large font sizes for register number ranges on campus notice board display', () => {
+    const h1 = createRoomWithCohorts('hall-nb-large', 'Notice Hall A', [
+      { branch: 'CS', semester: 'S5', subjectCode: 'CS301', count: 15, startRoll: 101 },
+    ]);
+
+    const html = renderToStaticMarkup(
+      React.createElement(SeatingNoticeSheet, {
+        exam: sampleExam,
+        rooms: [h1.room],
+        assignments: h1.assignments,
+        students: h1.candidates,
+      })
+    );
+
+    // Register number range text must have prominent large font (text-lg sm:text-xl font-black)
+    expect(html).toContain('text-lg sm:text-xl font-black');
+    expect(html).toContain('CS101 to CS115');
+  });
 });

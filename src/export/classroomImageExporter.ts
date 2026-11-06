@@ -98,23 +98,24 @@ export async function downloadClassroomSeatingImage(
           seatCell.style.flexDirection = 'column';
           seatCell.style.alignItems = 'center';
           seatCell.style.justifyContent = 'center';
-          seatCell.style.minHeight = '70px';
+          seatCell.style.minHeight = '72px';
           seatCell.style.padding = '6px 4px';
           seatCell.style.borderRadius = '8px';
-          seatCell.style.border = '1px solid #cbd5e1';
-          seatCell.style.background = isDisabled ? '#e2e8f0' : student ? '#e0e7ff' : '#ffffff';
-          seatCell.style.color = isDisabled ? '#64748b' : student ? '#1e1b4b' : '#475569';
-          seatCell.style.fontSize = '9px';
-          seatCell.style.fontWeight = '600';
+          seatCell.style.border = '1.5px solid #000000';
+          seatCell.style.background = isDisabled ? '#f1f5f9' : student ? '#ffffff' : '#ffffff';
+          seatCell.style.color = '#000000';
           seatCell.style.textAlign = 'center';
           seatCell.style.overflow = 'hidden';
 
           if (isDisabled) {
-            seatCell.textContent = 'Disabled';
+            seatCell.innerHTML = `<span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Blocked</span>`;
           } else if (student) {
-            seatCell.innerHTML = `<div>${student.registerNumber}</div><div style="font-size: 8px; opacity: 0.8; margin-top: 2px;">${student.branch}</div>`;
+            seatCell.innerHTML = `
+              <div style="font-size: 14px; font-weight: 900; font-family: monospace; letter-spacing: 0.5px; color: #000000; line-height: 1.2;">${student.registerNumber}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #334155; margin-top: 3px; line-height: 1.1;">${student.branch}${student.subjectCode ? ` • ${student.subjectCode}` : ''}</div>
+            `;
           } else {
-            seatCell.textContent = 'Open';
+            seatCell.innerHTML = `<span style="font-size: 11px; font-weight: 600; color: #94a3b8; font-style: italic;">Empty</span>`;
           }
 
           seatWrapper.appendChild(seatCell);

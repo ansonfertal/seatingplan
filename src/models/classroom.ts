@@ -47,9 +47,18 @@ export type Classroom = Room;
 export type SeatAvailabilityStatus = 'Available' | 'Disabled';
 
 /**
- * Theoretical physical capacity = rows * columns * studentsPerBench
+ * Theoretical physical capacity = sum(columnRows) * studentsPerBench (or rows * columns * studentsPerBench)
  */
-export function calculateTheoreticalCapacity(rows: number, columns: number, studentsPerBench: number): number {
+export function calculateTheoreticalCapacity(
+  rows: number,
+  columns: number,
+  studentsPerBench: number,
+  columnRows?: number[]
+): number {
+  if (columnRows && columnRows.length > 0) {
+    const totalBenches = columnRows.reduce((a, b) => a + b, 0);
+    return Math.max(0, totalBenches * studentsPerBench);
+  }
   return Math.max(0, rows * columns * studentsPerBench);
 }
 
@@ -57,7 +66,7 @@ export function calculateTheoreticalCapacity(rows: number, columns: number, stud
  * Effective capacity = theoretical capacity minus blocked bench positions and disabled seats.
  */
 export function calculateEffectiveCapacity(room: Room): number {
-  const theoretical = calculateTheoreticalCapacity(room.rows, room.columns, room.studentsPerBench);
+  const theoretical = calculateTheoreticalCapacity(room.rows, room.columns, room.studentsPerBench, room.columnRows);
   const disabledCount = room.disabledSeats?.length || 0;
   const blockedBenchCount = (room.blockedBenches?.length || 0) * room.studentsPerBench;
   const physicalEffective = Math.max(0, theoretical - disabledCount - blockedBenchCount);
@@ -75,7 +84,7 @@ export function calculateEffectiveCapacity(room: Room): number {
  * Validates that configured max capacity does not exceed effective physical capacity (PRD Section 4.3).
  */
 export function validateRoomCapacity(room: Room): { isValid: boolean; error?: string } {
-  const theoretical = calculateTheoreticalCapacity(room.rows, room.columns, room.studentsPerBench);
+  const theoretical = calculateTheoreticalCapacity(room.rows, room.columns, room.studentsPerBench, room.columnRows);
   const disabledCount = room.disabledSeats?.length || 0;
   const blockedBenchCount = (room.blockedBenches?.length || 0) * room.studentsPerBench;
   const physicalEffective = Math.max(0, theoretical - disabledCount - blockedBenchCount);

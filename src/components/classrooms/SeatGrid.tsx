@@ -103,6 +103,57 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ classroom, onUpdate }) => {
     });
   };
 
+  const handleAddBenchToColumn = (cIdx: number) => {
+    const nextColumnRows = [...columnRows];
+    nextColumnRows[cIdx] = (nextColumnRows[cIdx] ?? rows) + 1;
+    const nextRows = Math.max(...nextColumnRows);
+    const physicalEffective = calculateUsableCapacityForClassroom(
+      nextRows,
+      columns,
+      studentsPerBench,
+      disabledSeats,
+      nextColumnRows
+    );
+    const usableCapacity = maxCapacity != null ? Math.min(maxCapacity, physicalEffective) : physicalEffective;
+    onUpdate({
+      ...classroom,
+      rows: nextRows,
+      columnRows: nextColumnRows,
+      usableCapacity,
+    });
+  };
+
+  const handleRemoveBenchFromColumn = (cIdx: number) => {
+    if ((columnRows[cIdx] ?? rows) <= 1) return;
+    const nextColumnRows = [...columnRows];
+    nextColumnRows[cIdx] = nextColumnRows[cIdx] - 1;
+    const nextRows = Math.max(...nextColumnRows);
+
+    const nextDisabledSeats = disabledSeats.filter(
+      (s) => s.column !== cIdx || s.row < nextColumnRows[cIdx]
+    );
+    const nextBlockedBenches = blockedBenches.filter(
+      (b) => b.column !== cIdx || b.row < nextColumnRows[cIdx]
+    );
+
+    const physicalEffective = calculateUsableCapacityForClassroom(
+      nextRows,
+      columns,
+      studentsPerBench,
+      nextDisabledSeats,
+      nextColumnRows
+    );
+    const usableCapacity = maxCapacity != null ? Math.min(maxCapacity, physicalEffective) : physicalEffective;
+    onUpdate({
+      ...classroom,
+      rows: nextRows,
+      columnRows: nextColumnRows,
+      disabledSeats: nextDisabledSeats,
+      blockedBenches: nextBlockedBenches,
+      usableCapacity,
+    });
+  };
+
   const isSeatDisabled = (r: number, c: number, sIdx: number) => {
     return disabledSeats.some(
       (seat) => seat.row === r && seat.column === c && seat.seatIndex === sIdx
@@ -264,9 +315,35 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ classroom, onUpdate }) => {
         <div className="inline-flex gap-4 min-w-full justify-center px-4">
           {Array.from({ length: columns }).map((_, cIdx) => (
             <div key={`column-${cIdx}`} className="flex flex-col gap-3 items-center">
-              <span className="text-xs font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
-                Col {cIdx + 1}
-              </span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  Col {cIdx + 1}
+                </span>
+                <div className="flex items-center gap-1 bg-white border border-slate-200 px-1 py-0.5 rounded-md text-[11px] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBenchFromColumn(cIdx)}
+                    disabled={columnRows[cIdx] <= 1}
+                    className="w-4 h-4 flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed font-bold"
+                    title={`Remove bench from Column ${cIdx + 1}`}
+                    aria-label={`Remove bench from Column ${cIdx + 1}`}
+                  >
+                    <Minus className="w-2.5 h-2.5" />
+                  </button>
+                  <span className="font-semibold text-slate-700 min-w-[18px] text-center text-[10px]" title={`${columnRows[cIdx]} benches in Column ${cIdx + 1}`}>
+                    {columnRows[cIdx]}b
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAddBenchToColumn(cIdx)}
+                    className="w-4 h-4 flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 font-bold"
+                    title={`Add bench to Column ${cIdx + 1}`}
+                    aria-label={`Add bench to Column ${cIdx + 1}`}
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
 
               {Array.from({ length: columnRows[cIdx] }).map((_, rIdx) => {
                 const benchBlocked = isBenchBlocked(rIdx, cIdx);
@@ -332,6 +409,15 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ classroom, onUpdate }) => {
                   </div>
                 );
               })}
+
+              <button
+                type="button"
+                onClick={() => handleAddBenchToColumn(cIdx)}
+                className="w-full py-1 text-[10px] font-medium text-indigo-600 bg-indigo-50/70 hover:bg-indigo-100 rounded-lg border border-dashed border-indigo-200 flex items-center justify-center gap-1 transition-colors"
+                title={`Add bench to Column ${cIdx + 1}`}
+              >
+                <Plus className="w-2.5 h-2.5" /> Bench
+              </button>
             </div>
           ))}
         </div>

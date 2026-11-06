@@ -199,6 +199,19 @@ export const RoomVisualReview: React.FC<RoomVisualReviewProps> = ({
           >
             {Array.from({ length: Math.max(activeRoom.rows, ...(activeRoom.columnRows || [activeRoom.rows])) }, (_, rowIndex) =>
               Array.from({ length: activeRoom.columns }, (_, colIndex) => {
+                const colLimit = activeRoom.columnRows?.[colIndex] ?? activeRoom.rows;
+                if (rowIndex >= colLimit) {
+                  return (
+                    <div
+                      key={`bench-${rowIndex}-${colIndex}`}
+                      className="flex flex-col rounded-xl border border-dashed border-slate-200/80 bg-slate-50/30 p-2 opacity-30 items-center justify-center min-h-[90px]"
+                      aria-hidden="true"
+                    >
+                      <span className="text-[10px] text-slate-400 font-mono italic">No Bench</span>
+                    </div>
+                  );
+                }
+
                 const isBenchBlocked = activeRoom.blockedBenches?.some(
                   (b) => b.row === rowIndex && b.column === colIndex
                 );
@@ -310,13 +323,13 @@ export const RoomVisualReview: React.FC<RoomVisualReviewProps> = ({
                                   </div>
                                 ) : candidate ? (
                                   <div className="space-y-0.5">
-                                    <p className="font-mono text-xs font-bold text-slate-900 truncate">
+                                    <p className="font-mono text-sm font-black text-slate-900 truncate">
                                       {candidate.registerNumber}
                                     </p>
-                                    <p className="text-[10px] text-slate-600 truncate font-medium">
+                                    <p className="text-[10.5px] text-slate-700 truncate font-semibold">
                                       {candidate.name}
                                     </p>
-                                    <span className="inline-block rounded bg-purple-50 px-1 py-0.2 font-mono text-[9px] font-semibold text-purple-700 border border-purple-200 truncate max-w-full">
+                                    <span className="inline-block rounded bg-purple-50 px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-purple-800 border border-purple-200 truncate max-w-full">
                                       {candidate.subjectCode}
                                     </span>
                                   </div>

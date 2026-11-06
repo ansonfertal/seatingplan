@@ -28,6 +28,7 @@ export type GenerationPipelineOptions = {
   examDate?: string;
   minimizeClassroomsUsed?: boolean;
   differentArrangementPerDate?: boolean;
+  equalStudentDistribution?: boolean;
   versionId?: string;
   onProgress?: (progress: GenerationProgress) => void;
 };
@@ -52,6 +53,7 @@ export async function runGenerationPipeline({
   examDate,
   minimizeClassroomsUsed,
   differentArrangementPerDate,
+  equalStudentDistribution,
   versionId,
   onProgress,
 }: GenerationPipelineOptions): Promise<GenerationPipelineResult> {
@@ -68,6 +70,7 @@ export async function runGenerationPipeline({
     examDate,
     minimizeClassroomsUsed: minimizeClassroomsUsed ?? rules.minimizeClassroomsUsed,
     differentArrangementPerDate: differentArrangementPerDate ?? rules.differentArrangementPerDate,
+    equalStudentDistribution: equalStudentDistribution ?? rules.equalStudentDistribution,
     versionId,
     onProgress,
   });

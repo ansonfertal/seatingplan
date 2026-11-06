@@ -4,6 +4,7 @@ import type { ExamCandidate } from '../models/student';
 import type { AssignedSeat } from '../models/arrangement';
 import type { Exam, ExamDetails } from '../models/exam';
 import { formatRegisterRange } from '../utils/rangeFormatter';
+import { getClassroomColumnRows } from '../utils/capacityCalculator';
 
 // Helper to draw standard strictly monochrome header on jsPDF document
 function addHeader(
@@ -411,9 +412,10 @@ export function generateSeatingNoticePdf(
 
     cohorts.forEach((cohort) => {
       cohort.rangeText = formatRegisterRange(cohort.regNumbers);
-      pdf.setFontSize(9.5);
-      cohort.splitText = pdf.splitTextToSize(cohort.rangeText, 105);
-      cohort.height = Math.max(9, cohort.splitText.length * 4.6 + 3);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      cohort.splitText = pdf.splitTextToSize(cohort.rangeText, 118);
+      cohort.height = Math.max(9, cohort.splitText.length * 5.2 + 3);
     });
 
     // Room total height:
@@ -465,16 +467,16 @@ export function generateSeatingNoticePdf(
     currentY += 14;
 
     // 2. Table Header
-    pdf.setFontSize(9);
+    pdf.setFontSize(9.5);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
     pdf.text('Branch', 12, currentY + 3);
-    pdf.text('Sem', 34, currentY + 3);
-    pdf.text('Course Code', 48, currentY + 3);
-    pdf.text('Allocated Register Numbers (Notice Board Display)', 78, currentY + 3);
-    pdf.text('Count', 196, currentY + 3, { align: 'right' });
+    pdf.text('Sem', 32, currentY + 3);
+    pdf.text('Course Code', 46, currentY + 3);
+    pdf.text('Allocated Register Numbers (Notice Board Display)', 74, currentY + 3);
+    pdf.text('Count', 198, currentY + 3, { align: 'right' });
 
-    pdf.setLineWidth(0.4);
+    pdf.setLineWidth(0.5);
     pdf.setDrawColor(0, 0, 0);
     pdf.line(10, currentY + 5, 200, currentY + 5);
     currentY += 6;
@@ -488,36 +490,40 @@ export function generateSeatingNoticePdf(
         addHeader(pdf, exam, 'SEATING ARRANGEMENT NOTICE — CAMPUS DISPLAY', `${room.name} (Contd.)`, false);
 
         // Re-draw table header on continuation page
-        pdf.setFontSize(9);
+        pdf.setFontSize(9.5);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(0, 0, 0);
         pdf.text('Branch', 12, currentY + 3);
-        pdf.text('Sem', 34, currentY + 3);
-        pdf.text('Course Code', 48, currentY + 3);
-        pdf.text('Allocated Register Numbers (Notice Board Display)', 78, currentY + 3);
-        pdf.text('Count', 196, currentY + 3, { align: 'right' });
+        pdf.text('Sem', 32, currentY + 3);
+        pdf.text('Course Code', 46, currentY + 3);
+        pdf.text('Allocated Register Numbers (Notice Board Display)', 74, currentY + 3);
+        pdf.text('Count', 198, currentY + 3, { align: 'right' });
 
-        pdf.setLineWidth(0.4);
+        pdf.setLineWidth(0.5);
         pdf.setDrawColor(0, 0, 0);
         pdf.line(10, currentY + 5, 200, currentY + 5);
         currentY += 6;
       }
 
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
+      pdf.setFontSize(11);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(cohort.branch, 12, currentY + 4);
-      pdf.text(cohort.semester, 34, currentY + 4);
-      pdf.text(cohort.subjectCode, 48, currentY + 4);
+      pdf.text(cohort.branch, 12, currentY + 4.8);
+      pdf.text(cohort.semester, 32, currentY + 4.8);
+      pdf.text(cohort.subjectCode, 46, currentY + 4.8);
 
       // Large notice font for register numbers with text wrap calculation
-      pdf.setFontSize(9.5);
-      pdf.text(cohort.splitText, 78, currentY + 4);
-      pdf.text(String(cohort.regNumbers.length), 196, currentY + 4, { align: 'right' });
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      pdf.text(cohort.splitText, 74, currentY + 4.8);
+
+      pdf.setFontSize(11.5);
+      pdf.text(String(cohort.regNumbers.length), 198, currentY + 4.8, { align: 'right' });
 
       currentY += cohort.height;
 
       pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.4);
       pdf.line(10, currentY, 200, currentY);
       currentY += 1.5;
     });
@@ -610,31 +616,43 @@ export function generateRoomSeatingPlanPdf(
     const startY = 46;
     const availableWidth = 277;
     const availableHeight = 144;
+    const colRows = getClassroomColumnRows(room.rows, room.columns, room.columnRows);
+    const maxRows = Math.max(room.rows, ...colRows);
     const benchWidth = availableWidth / room.columns;
-    const benchHeight = Math.min(28, availableHeight / room.rows);
+    const benchHeight = Math.min(28, availableHeight / maxRows);
 
-    // Dynamic sizing to guarantee zero text/row collisions
-    const fontSizeReg = Math.min(7.5, Math.max(4.5, benchHeight * 0.28));
-    const fontSizeInfo = Math.min(6.5, Math.max(4.0, benchHeight * 0.22));
+    // Dynamic sizing to guarantee large, bold readable font while strictly fitting single A4 landscape sheet
+    const fontSizeReg = maxRows <= 5
+      ? Math.min(12, Math.max(9, benchHeight * 0.44))
+      : maxRows <= 8
+      ? Math.min(10.5, Math.max(7.5, benchHeight * 0.40))
+      : Math.min(9, Math.max(6.5, benchHeight * 0.36));
 
-    for (let r = 0; r < room.rows; r++) {
+    const fontSizeInfo = maxRows <= 5
+      ? Math.min(8, Math.max(6.5, benchHeight * 0.25))
+      : maxRows <= 8
+      ? Math.min(7, Math.max(5.5, benchHeight * 0.22))
+      : Math.min(6, Math.max(4.5, benchHeight * 0.20));
+
+    for (let r = 0; r < maxRows; r++) {
       for (let c = 0; c < room.columns; c++) {
+        if (r >= colRows[c]) continue;
         const x = startX + c * benchWidth;
         const y = startY + r * benchHeight;
 
         pdf.setDrawColor(0, 0, 0);
-        pdf.setLineWidth(0.3);
+        pdf.setLineWidth(0.35);
         pdf.rect(x, y, benchWidth - 1.5, benchHeight - 1.5);
 
-        pdf.setFontSize(5.5);
-        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.5);
+        pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(0, 0, 0);
         pdf.text(`R${r + 1}-C${c + 1}`, x + 1.5, y + 3.2);
 
         // Seats inside bench
         const seatAvailableWidth = (benchWidth - 3) / perBench;
-        const seatHeight = benchHeight - 5;
-        const seatStartY = y + 4.2;
+        const seatHeight = benchHeight - 4.8;
+        const seatStartY = y + 4.0;
 
         for (let s = 0; s < perBench; s++) {
           const seatX = x + 1 + s * seatAvailableWidth;
@@ -645,15 +663,16 @@ export function generateRoomSeatingPlanPdf(
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(fontSizeReg);
             pdf.setTextColor(0, 0, 0);
-            const regStr = (candidate.registerNumber || '').substring(0, 12);
-            pdf.text(regStr, seatX + 1, seatStartY + seatHeight * 0.45);
+            const regStr = (candidate.registerNumber || '').substring(0, 14);
+            pdf.text(regStr, seatX + 1.5, seatStartY + seatHeight * 0.48);
 
             pdf.setFont('helvetica', 'normal');
             pdf.setFontSize(fontSizeInfo);
-            const infoStr = `${candidate.branch || ''} ${candidate.subjectCode || ''}`.substring(0, 14);
-            pdf.text(infoStr, seatX + 1, seatStartY + seatHeight * 0.82);
+            const infoStr = `${candidate.branch || ''} ${candidate.subjectCode ? `• ${candidate.subjectCode}` : ''}`.substring(0, 16);
+            pdf.text(infoStr, seatX + 1.5, seatStartY + seatHeight * 0.85);
           } else {
-            pdf.setFontSize(5);
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(Math.max(5.5, fontSizeInfo));
             pdf.setTextColor(0, 0, 0);
             pdf.text('Empty', seatX + 1.5, seatStartY + seatHeight * 0.55);
           }

@@ -84,6 +84,7 @@ const defaultRules: SeatingRules = {
   sameSubjectCodeSeparation: true,
   registerNumberOrder: 'sorted',
   minimizeClassroomsUsed: true,
+  equalStudentDistribution: false,
   differentArrangementPerDate: true,
 };
 

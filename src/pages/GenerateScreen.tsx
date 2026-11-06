@@ -79,6 +79,7 @@ export const GenerateScreen: React.FC = () => {
         examDate: exam.examDate,
         minimizeClassroomsUsed: rules.minimizeClassroomsUsed ?? true,
         differentArrangementPerDate: rules.differentArrangementPerDate ?? true,
+        equalStudentDistribution: rules.equalStudentDistribution ?? false,
         versionId,
         onProgress: (p) => setProgress(p),
       });
@@ -172,7 +173,7 @@ export const GenerateScreen: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Room-Fill Strategy *
@@ -206,6 +207,27 @@ export const GenerateScreen: React.FC = () => {
                 {(rules.minimizeClassroomsUsed ?? true)
                   ? 'Packs fewer rooms, keeping unused halls free.'
                   : 'Activates all available classrooms in the building.'}
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Student Headcount Distribution *
+              </label>
+              <select
+                value={(rules.equalStudentDistribution ?? false) ? 'equal' : 'capacity'}
+                onChange={(e) => setRules({ ...rules, equalStudentDistribution: e.target.value === 'equal' })}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+              >
+                <option value="equal">Equal Distribution (~Equal count per room)</option>
+                <option value="capacity">Pack to Capacity (Sequential/Max room load)</option>
+              </select>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">
+                {(rules.equalStudentDistribution ?? false)
+                  ? (rules.minimizeClassroomsUsed ?? true)
+                    ? 'Balances headcount equally across minimal rooms.'
+                    : 'Balances headcount equally across all active rooms.'
+                  : 'Fills rooms to maximum capacity sequentially.'}
               </span>
             </div>
 

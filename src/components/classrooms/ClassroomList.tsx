@@ -108,7 +108,18 @@ export const ClassroomList: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
                   <div>
                     <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1">Layout</span>
-                    {room.rows} rows × {room.columns} cols
+                    {room.columnRows && room.columnRows.some((r) => r !== room.columnRows![0]) ? (
+                      <div>
+                        <span className="font-semibold text-slate-800">
+                          {room.columns} cols ({room.columnRows.reduce((a, b) => a + b, 0)} benches)
+                        </span>
+                        <span className="block text-[11px] text-indigo-600 font-medium">
+                          Cols: {room.columnRows.map((r, i) => `C${i + 1}:${r}`).join(', ')}
+                        </span>
+                      </div>
+                    ) : (
+                      <span>{room.rows} rows × {room.columns} cols</span>
+                    )}
                   </div>
                   <div>
                     <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1">Bench Size</span>

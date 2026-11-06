@@ -52,24 +52,29 @@ export const RoomSeatingPlanSheet: React.FC<RoomSeatingPlanSheetProps> = ({
 
         const perBench = room.studentsPerBench ?? 2;
         const assignedCandidatesCount = Array.from(seatLookup.values()).filter(Boolean).length;
-        const totalCapacity = room.usableCapacity ?? room.maxCapacity ?? (room.rows * room.columns * perBench);
+        const totalBenches = room.columnRows && room.columnRows.length > 0
+          ? room.columnRows.reduce((a, b) => a + b, 0)
+          : room.rows * room.columns;
+        const totalCapacity = room.usableCapacity ?? room.maxCapacity ?? (totalBenches * perBench);
 
-        // Dynamic typography based on row count to ensure zero text or row overlaps
-        const isVeryDense = room.rows > 8;
-        const isDense = room.rows > 5 && room.rows <= 8;
+        // Dynamic typography based on row count to ensure large readable fonts while strictly fitting landscape A4 single sheet
+        const maxRows = Math.max(room.rows, ...(room.columnRows || [room.rows]));
+        const isVeryDense = maxRows > 8;
+        const isDense = maxRows > 5 && maxRows <= 8;
 
         const cellPad = isVeryDense ? 'p-0.5' : isDense ? 'p-0.5 sm:p-1' : 'p-1';
-        const seatPad = isVeryDense ? 'p-0.5' : isDense ? 'p-0.5' : 'p-1';
+        const seatPad = isVeryDense ? 'p-0.5' : isDense ? 'p-0.5 sm:p-1' : 'p-1 sm:p-1.5';
+        const posTextClass = isVeryDense ? 'text-[7px]' : isDense ? 'text-[7.5px]' : 'text-[8.5px]';
         const regTextClass = isVeryDense
-          ? 'text-[7px]'
+          ? 'text-[11px] sm:text-xs'
           : isDense
-          ? 'text-[8px]'
-          : 'text-[9.5px]';
+          ? 'text-xs sm:text-[13.5px]'
+          : 'text-sm sm:text-base';
         const infoTextClass = isVeryDense
-          ? 'text-[6px]'
+          ? 'text-[7.5px] sm:text-[8px]'
           : isDense
-          ? 'text-[7px]'
-          : 'text-[8px]';
+          ? 'text-[8.5px] sm:text-[9.5px]'
+          : 'text-[10px] sm:text-[11px]';
 
         return (
           <PrintContainer
@@ -117,13 +122,30 @@ export const RoomSeatingPlanSheet: React.FC<RoomSeatingPlanSheetProps> = ({
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden my-0.5 bg-white">
               <table className="w-full h-full border-collapse table-fixed bg-white">
                 <tbody>
-                  {Array.from({ length: room.rows }, (_, rowIndex) => (
+                  {Array.from({ length: maxRows }, (_, rowIndex) => (
                     <tr
                       key={`row-${rowIndex}`}
-                      style={{ height: `${100 / room.rows}%` }}
+                      style={{ height: `${100 / maxRows}%` }}
                       className="border-b border-black"
                     >
                       {Array.from({ length: room.columns }, (_, colIndex) => {
+                        const colLimit = room.columnRows?.[colIndex] ?? room.rows;
+                        if (rowIndex >= colLimit) {
+                          return (
+                            <td
+                              key={`bench-${rowIndex}-${colIndex}`}
+                              className="border border-slate-300 bg-slate-50/50 align-middle text-center overflow-hidden"
+                              style={{
+                                width: `${100 / room.columns}%`,
+                                height: `${100 / maxRows}%`,
+                                boxSizing: 'border-box',
+                              }}
+                            >
+                              <span className="text-[7px] text-slate-400 font-mono italic">No Bench</span>
+                            </td>
+                          );
+                        }
+
                         const isBenchBlocked = room.blockedBenches?.some(
                           (b) => b.row === rowIndex && b.column === colIndex
                         );
@@ -134,22 +156,22 @@ export const RoomSeatingPlanSheet: React.FC<RoomSeatingPlanSheetProps> = ({
                             className={`border border-black ${cellPad} align-top bg-white h-full overflow-hidden`}
                             style={{
                               width: `${100 / room.columns}%`,
-                              height: `${100 / room.rows}%`,
+                              height: `${100 / maxRows}%`,
                               boxSizing: 'border-box',
                             }}
                           >
                             <div className="flex flex-col h-full justify-between overflow-hidden">
-                              <div className="flex items-center justify-between text-[8px] font-bold text-black border-b border-black pb-0.5 shrink-0 leading-none">
+                              <div className="flex items-center justify-between text-[8.5px] font-black text-black border-b border-black pb-0.5 shrink-0 leading-none">
                                 <span>R{rowIndex + 1}-C{colIndex + 1}</span>
                               </div>
 
                               {isBenchBlocked ? (
-                                <div className="flex-1 flex items-center justify-center text-[9px] font-bold text-black italic bg-white my-0.5 rounded border border-dashed border-black">
+                                <div className="flex-1 flex items-center justify-center text-[10px] font-black text-black italic bg-white my-0.5 rounded border border-dashed border-black">
                                   BLOCKED BENCH
                                 </div>
                               ) : (
                                 <div
-                                  className="grid gap-0.5 flex-1 min-h-0 items-stretch mt-0.5 overflow-hidden"
+                                  className="grid gap-1 flex-1 min-h-0 items-stretch mt-0.5 overflow-hidden"
                                   style={{
                                     gridTemplateColumns: `repeat(${perBench}, 1fr)`,
                                   }}
@@ -164,24 +186,30 @@ export const RoomSeatingPlanSheet: React.FC<RoomSeatingPlanSheetProps> = ({
                                     return (
                                       <div
                                         key={`pos-${seatIndex}`}
-                                        className={`rounded border border-black ${seatPad} text-center flex flex-col justify-center overflow-hidden bg-white text-black`}
+                                        className={`rounded border border-black ${seatPad} text-center flex flex-col justify-between overflow-hidden bg-white text-black`}
                                       >
-                                        <span className="block text-[7px] font-bold text-black uppercase leading-none">
-                                          P{seatIndex + 1}
-                                        </span>
+                                        <div className="flex items-center justify-between px-0.5 leading-none shrink-0">
+                                          <span className={`block ${posTextClass} font-black text-black uppercase leading-none`}>
+                                            P{seatIndex + 1}
+                                          </span>
+                                          {isSeatDisabled && (
+                                            <span className="text-[7px] font-black text-black uppercase">Blocked</span>
+                                          )}
+                                        </div>
+
                                         {isSeatDisabled ? (
-                                          <span className="text-[7px] text-black italic leading-none">Blocked</span>
+                                          <span className="text-[8px] font-bold text-black italic leading-none my-auto">Blocked</span>
                                         ) : candidate ? (
-                                          <div className="leading-tight mt-0.5 overflow-hidden">
-                                            <p className={`font-mono font-black text-black truncate ${regTextClass} leading-tight`}>
+                                          <div className="leading-tight overflow-hidden my-auto py-0.5">
+                                            <p className={`font-mono font-black text-black truncate ${regTextClass} tracking-tight leading-tight`}>
                                               {candidate.registerNumber}
                                             </p>
-                                            <p className={`font-bold text-black truncate ${infoTextClass} leading-tight`}>
+                                            <p className={`font-bold text-black truncate ${infoTextClass} leading-tight mt-0.5`}>
                                               {candidate.branch} {candidate.subjectCode ? `• ${candidate.subjectCode}` : ''}
                                             </p>
                                           </div>
                                         ) : (
-                                          <span className="text-[7px] text-black italic leading-none">Empty</span>
+                                          <span className="text-[8px] font-bold text-black italic leading-none my-auto">Empty</span>
                                         )}
                                       </div>
                                     );
