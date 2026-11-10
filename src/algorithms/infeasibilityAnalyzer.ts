@@ -2,7 +2,7 @@ import type { Classroom, Room } from '../models/classroom';
 import { calculateEffectiveCapacity } from '../models/classroom';
 import type { ExamCandidate, Student } from '../models/student';
 import { normalizeCode } from '../models/student';
-import type { UnassignedCandidate } from '../models/arrangement';
+import type { SeatingRules, UnassignedCandidate } from '../models/arrangement';
 
 export type InfeasibilityDiagnosisType =
   | 'CAPACITY_SHORTAGE'
@@ -33,7 +33,8 @@ export type InfeasibilityReport = {
 export function analyzeAllocationInfeasibility(
   students: (Student | ExamCandidate)[],
   classrooms: (Classroom | Room)[],
-  unassigned: UnassignedCandidate[]
+  unassigned: UnassignedCandidate[],
+  rules?: SeatingRules
 ): InfeasibilityReport {
   const activeRooms = classrooms.filter((r) => r.active !== false);
   const totalCapacity = activeRooms.reduce((sum, r) => sum + calculateEffectiveCapacity(r), 0);
@@ -76,29 +77,38 @@ export function analyzeAllocationInfeasibility(
     activeRooms.reduce((sum, r) => sum + r.studentsPerBench * calculateEffectiveCapacity(r), 0) /
     Math.max(1, totalCapacity);
 
-  for (const [subject, count] of subjectCounts.entries()) {
-    // If a subject represents > 50% of candidates in rooms with 2-person benches
-    const maxTheoreticalLimit = totalCapacity / Math.max(1, avgStudentsPerBench);
-    if (avgStudentsPerBench >= 2 && count > maxTheoreticalLimit) {
-      return {
-        diagnosisType: 'PIGEONHOLE_SUBJECT_DOMINANCE',
-        title: `Subject Code Concentration (${subject})`,
-        explanation: `Candidates for subject "${subject}" (${count} students) exceed the maximum compatible bench slots (${Math.floor(maxTheoreticalLimit)}). By Constraint C2, no two candidates sharing subject code "${subject}" may sit on the same bench.`,
-        unassignedCount: unassigned.length,
-        unassignedCandidates: unassigned,
-        recommendations: [
-          {
-            title: 'Configure 1 Student per Bench (Single Occupancy)',
-            description: `Set rooms hosting subject "${subject}" to 1 student per bench to eliminate same-bench subject conflicts entirely.`,
-            actionType: 'change_bench_occupancy',
-          },
-          {
-            title: 'Add More Multi-Subject Rooms',
-            description: 'Incorporate candidates from other exams/subjects into the same session to provide compatible bench companions.',
-            actionType: 'rebalance',
-          },
-        ],
-      };
+  const separateSubjectOnBench = rules?.sameBenchSubjectSeparation ?? rules?.sameSubjectCodeSeparation ?? true;
+
+  if (separateSubjectOnBench) {
+    for (const [subject, count] of subjectCounts.entries()) {
+      // If a subject represents > 50% of candidates in rooms with 2-person benches
+      const maxTheoreticalLimit = totalCapacity / Math.max(1, avgStudentsPerBench);
+      if (avgStudentsPerBench >= 2 && count > maxTheoreticalLimit) {
+        return {
+          diagnosisType: 'PIGEONHOLE_SUBJECT_DOMINANCE',
+          title: `Subject Code Concentration (${subject})`,
+          explanation: `Candidates for subject "${subject}" (${count} students) exceed the maximum compatible bench slots (${Math.floor(maxTheoreticalLimit)}). By Constraint C2, no two candidates sharing subject code "${subject}" may sit on the same bench.`,
+          unassignedCount: unassigned.length,
+          unassignedCandidates: unassigned,
+          recommendations: [
+            {
+              title: 'Allow Same Subject on Same Bench',
+              description: 'Turn off "Same Subject Code Separation" in the constraint section to permit candidates writing this subject to share benches.',
+              actionType: 'rebalance',
+            },
+            {
+              title: 'Configure 1 Student per Bench (Single Occupancy)',
+              description: `Set rooms hosting subject "${subject}" to 1 student per bench to eliminate same-bench subject conflicts entirely.`,
+              actionType: 'change_bench_occupancy',
+            },
+            {
+              title: 'Add More Multi-Subject Rooms',
+              description: 'Incorporate candidates from other exams/subjects into the same session to provide compatible bench companions.',
+              actionType: 'rebalance',
+            },
+          ],
+        };
+      }
     }
   }
 

@@ -38,16 +38,21 @@ export type SeatingGenerationOutput = {
 
 /**
  * Checks whether placing candidate S on a bench alongside existing occupants violates:
- * - C2: Same subject code
- * - C3: Same branch AND same semester
+ * - C2: Same subject code (governed by sameBenchSubjectSeparation ?? sameSubjectCodeSeparation)
+ * - C3: Same branch AND same semester (governed by sameBenchSeparation & sameSemesterSeparation)
  */
 export function checkBenchConflict(
   candidate: Student | ExamCandidate,
-  benchOccupants: (Student | ExamCandidate)[]
+  benchOccupants: (Student | ExamCandidate)[],
+  rules?: SeatingRules
 ): { hasConflict: boolean; reason?: 'subject' | 'branch_semester'; conflictingStudent?: Student | ExamCandidate } {
   const candSub = normalizeCode(candidate.subjectCode);
   const candBranch = normalizeCode(candidate.branch);
   const candSem = normalizeCode(candidate.semester);
+
+  const separateSubject = rules?.sameBenchSubjectSeparation ?? rules?.sameSubjectCodeSeparation ?? true;
+  const separateBranch = rules?.sameBenchSeparation ?? true;
+  const separateSemester = rules?.sameSemesterSeparation ?? true;
 
   for (const occupant of benchOccupants) {
     const occSub = normalizeCode(occupant.subjectCode);
@@ -55,12 +60,14 @@ export function checkBenchConflict(
     const occSem = normalizeCode(occupant.semester);
 
     // Hard Constraint C2: No two occupants of same bench share subject code
-    if (candSub && occSub && candSub === occSub) {
+    // Enforced only when same-subject bench separation is enabled
+    if (separateSubject && candSub && occSub && candSub === occSub) {
       return { hasConflict: true, reason: 'subject', conflictingStudent: occupant };
     }
 
     // Hard Constraint C3: No two occupants of same bench share BOTH branch and semester
-    if (candBranch && occBranch && candBranch === occBranch && candSem && occSem && candSem === occSem) {
+    // Enforced only when same-bench branch separation AND semester separation are enabled
+    if (separateBranch && separateSemester && candBranch && occBranch && candBranch === occBranch && candSem && occSem && candSem === occSem) {
       return { hasConflict: true, reason: 'branch_semester', conflictingStudent: occupant };
     }
   }
@@ -251,17 +258,18 @@ export function generateConstraintAwareSeating(
         const benchKey = `${classroom.id}:${node.row}-${node.column}`;
         const currentBenchOccupants = benchOccupantsMap.get(benchKey) || [];
 
-        // Rule: Two students of the same branch can NEVER occupy the same bench.
-        // If only students of the same branch are left, only 1 student can occupy a bench in that case.
-        const hasSameBranchOnBench = currentBenchOccupants.some(
-          (occ) => normalizeCode(occ.branch) === normalizeCode(candidate.branch)
-        );
-        if (hasSameBranchOnBench) {
-          continue;
+        // Rule: Two students of the same branch can NEVER occupy the same bench when sameBenchSeparation is active.
+        if (rules.sameBenchSeparation) {
+          const hasSameBranchOnBench = currentBenchOccupants.some(
+            (occ) => normalizeCode(occ.branch) === normalizeCode(candidate.branch)
+          );
+          if (hasSameBranchOnBench) {
+            continue;
+          }
         }
 
         // Check Hard Constraints C2 and C3 on the same bench
-        const conflictCheck = checkBenchConflict(candidate, currentBenchOccupants);
+        const conflictCheck = checkBenchConflict(candidate, currentBenchOccupants, rules);
         if (conflictCheck.hasConflict) {
           // Hard conflict on bench -> cannot place here!
           continue;
@@ -279,7 +287,7 @@ export function generateConstraintAwareSeating(
         // Prefer seatIndex 0 (primary seat position) across all benches
         penalty += node.seatIndex * 150;
 
-        // Check neighboring seats in graph (Adjacency Constraints)
+        // Check neighboring seats in graph (Adjacency Constraints across different benches)
         const neighborKeys = graph.adjacency[node.key] || [];
         let hasHardAdjacentConflict = false;
 
@@ -287,6 +295,11 @@ export function generateConstraintAwareSeating(
         // do not prevent them from occupying vacant benches.
         if (neighborKeys.length > 0) {
           for (const nKey of neighborKeys) {
+            // Ignore seats on the same bench (governed by checkBenchConflict above)
+            const [nRowStr, nColStr] = nKey.split('-');
+            if (parseInt(nRowStr, 10) === node.row && parseInt(nColStr, 10) === node.column) {
+              continue;
+            }
             const neighborStudentId = seatOccupantMap.get(`${classroom.id}:${nKey}`);
             if (!neighborStudentId) continue;
             const neighborStudent = studentMap.get(neighborStudentId);
@@ -377,7 +390,9 @@ export function generateConstraintAwareSeating(
         assignedStudentIds.add(candidate.id);
         roomAssignedCount++;
       } else {
-        // Infeasible to place candidate on any available seat without C2 or C3 violation
+        // Infeasible to place candidate on any available seat without companion violation
+        const separateSubject = rules.sameBenchSubjectSeparation ?? rules.sameSubjectCodeSeparation ?? true;
+        const conflictLabel = separateSubject ? 'C2/C3 bench companion conflict' : 'C3 branch/semester bench companion conflict';
         unassignedCandidates.push({
           candidateId: candidate.id,
           registerNumber: candidate.registerNumber,
@@ -385,7 +400,7 @@ export function generateConstraintAwareSeating(
           branch: candidate.branch,
           semester: candidate.semester || '',
           subjectCode: candidate.subjectCode || '',
-          reason: `No compatible bench found in room ${classroom.name} (C2/C3 bench companion conflict)`,
+          reason: `No compatible bench found in room ${classroom.name} (${conflictLabel})`,
         });
       }
     });

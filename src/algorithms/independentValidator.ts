@@ -200,7 +200,9 @@ export function validateSeatingPlanIndependently(
         const semB = normalizeCode(studentB.semester);
 
         // Constraint C2: No two occupants of same bench share subject code
-        if (subA && subB && subA === subB) {
+        // Enforced only when same-subject bench separation is enabled
+        const separateSubjectOnBench = rules?.sameBenchSubjectSeparation ?? rules?.sameSubjectCodeSeparation ?? true;
+        if (separateSubjectOnBench && subA && subB && subA === subB) {
           violations.push({
             type: 'C2_SAME_BENCH_SUBJECT',
             classroomId: roomId,
@@ -214,7 +216,10 @@ export function validateSeatingPlanIndependently(
         }
 
         // Constraint C3: No two occupants of same bench share both normalized branch and semester
-        if (branchA && branchB && branchA === branchB && semA && semB && semA === semB) {
+        // Enforced only when same-bench branch separation AND semester separation are enabled
+        const separateBranchOnBench = rules?.sameBenchSeparation ?? true;
+        const separateSemester = rules?.sameSemesterSeparation ?? true;
+        if (separateBranchOnBench && separateSemester && branchA && branchB && branchA === branchB && semA && semB && semA === semB) {
           violations.push({
             type: 'C3_SAME_BENCH_BRANCH_SEMESTER',
             classroomId: roomId,

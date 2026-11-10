@@ -24,6 +24,8 @@ export type SeatingRules = {
   equalStudentDistribution?: boolean;
   /** Vary room selection and seating arrangement across different exam dates */
   differentArrangementPerDate?: boolean;
+  /** Prohibit candidates taking the same subject code on the same multi-seat bench (default: true) */
+  sameBenchSubjectSeparation?: boolean;
 };
 
 export const DEFAULT_SEATING_RULES: SeatingRules = {
@@ -33,6 +35,7 @@ export const DEFAULT_SEATING_RULES: SeatingRules = {
   diagonalAdjacency: false,
   sameSemesterSeparation: true,
   sameSubjectCodeSeparation: true,
+  sameBenchSubjectSeparation: true,
   registerNumberOrder: 'sorted',
   minimizeClassroomsUsed: true,
   equalStudentDistribution: false,

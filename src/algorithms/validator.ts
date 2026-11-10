@@ -47,14 +47,22 @@ export function validateArrangementConflicts(
           return;
         }
 
+        const isSameBench = assignment.row === neighborAssignment.row && assignment.column === neighborAssignment.column;
+        const separateSubjectOnBench = rules.sameBenchSubjectSeparation ?? rules.sameSubjectCodeSeparation;
+        const shouldCheckSubject = isSameBench ? separateSubjectOnBench : rules.sameSubjectCodeSeparation;
+
         const matchingReasons: Array<{ reason: ConflictDetail['reason']; value?: string; branch: string }> = [];
         if (studentA.branch && studentA.branch === studentB.branch) {
-          matchingReasons.push({ reason: 'branch', branch: studentA.branch });
+          if (!isSameBench || rules.sameBenchSeparation) {
+            matchingReasons.push({ reason: 'branch', branch: studentA.branch });
+          }
         }
         if (rules.sameSemesterSeparation && studentA.semester && studentA.semester === studentB.semester) {
-          matchingReasons.push({ reason: 'semester', value: studentA.semester, branch: studentA.branch });
+          if (!isSameBench || rules.sameBenchSeparation) {
+            matchingReasons.push({ reason: 'semester', value: studentA.semester, branch: studentA.branch });
+          }
         }
-        if (rules.sameSubjectCodeSeparation && studentA.subjectCode && studentA.subjectCode === studentB.subjectCode) {
+        if (shouldCheckSubject && studentA.subjectCode && studentA.subjectCode === studentB.subjectCode) {
           matchingReasons.push({ reason: 'subjectCode', value: studentA.subjectCode, branch: studentA.branch });
         }
 

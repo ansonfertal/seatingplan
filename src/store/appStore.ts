@@ -82,6 +82,7 @@ const defaultRules: SeatingRules = {
   diagonalAdjacency: false,
   sameSemesterSeparation: true,
   sameSubjectCodeSeparation: true,
+  sameBenchSubjectSeparation: true,
   registerNumberOrder: 'sorted',
   minimizeClassroomsUsed: true,
   equalStudentDistribution: false,

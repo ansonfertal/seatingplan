@@ -7,6 +7,23 @@ export const RulesForm: React.FC = () => {
   const { rules, setRules } = useAppStore();
 
   const handleToggle = (key: keyof SeatingRules) => {
+    if (key === 'sameSubjectCodeSeparation') {
+      const nextVal = !rules.sameSubjectCodeSeparation;
+      setRules({
+        ...rules,
+        sameSubjectCodeSeparation: nextVal,
+        sameBenchSubjectSeparation: nextVal,
+      });
+      return;
+    }
+    if (key === 'sameBenchSubjectSeparation') {
+      const currentVal = rules.sameBenchSubjectSeparation ?? rules.sameSubjectCodeSeparation;
+      setRules({
+        ...rules,
+        sameBenchSubjectSeparation: !currentVal,
+      });
+      return;
+    }
     setRules({
       ...rules,
       [key]: !rules[key]
@@ -128,6 +145,13 @@ export const RulesForm: React.FC = () => {
           recommended
         />
         <RuleToggle
+          title="Same Bench Subject Separation"
+          description="Prevents two students appearing for the same subject code from sitting on the same multi-seat bench. Turn this off to permit same-subject students to share a bench."
+          isActive={rules.sameBenchSubjectSeparation ?? rules.sameSubjectCodeSeparation}
+          onToggle={() => handleToggle('sameBenchSubjectSeparation')}
+          recommended
+        />
+        <RuleToggle
           title="Horizontal Adjacency"
           description="Prevents same-branch students from sitting directly across the aisle on the same row level."
           isActive={rules.horizontalAdjacency}
@@ -155,7 +179,7 @@ export const RulesForm: React.FC = () => {
         />
         <RuleToggle
           title="Same Subject Code Separation"
-          description="Prevents students with the same subject code from occupying adjacent seats."
+          description="Prevents students with the same subject code from occupying adjacent seats across rows, columns, or aisles. When disabled, also permits same-subject candidates to share a bench."
           isActive={rules.sameSubjectCodeSeparation}
           onToggle={() => handleToggle('sameSubjectCodeSeparation')}
         />

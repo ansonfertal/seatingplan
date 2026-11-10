@@ -93,7 +93,8 @@ export async function runGenerationPipeline({
     infeasibilityReport = analyzeAllocationInfeasibility(
       students,
       classrooms,
-      generationOutput.unassignedCandidates
+      generationOutput.unassignedCandidates,
+      rules
     );
   }
 

@@ -3,7 +3,8 @@ import { X, ArrowLeftRight, AlertTriangle, CheckCircle, ShieldAlert, Ban } from 
 import { Button } from '../ui/Button';
 import type { Room } from '../../models/classroom';
 import type { ExamCandidate } from '../../models/student';
-import type { AssignedSeat } from '../../models/arrangement';
+import type { AssignedSeat, SeatingRules } from '../../models/arrangement';
+import { useAppStore } from '../../store/appStore';
 
 export type BenchDetailModalProps = {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export type BenchDetailModalProps = {
   students: ExamCandidate[];
   onInitiateSwap: (seat: { roomId: string; row: number; column: number; seatIndex: number }) => void;
   isLocked?: boolean;
+  rules?: SeatingRules;
 };
 
 export const BenchDetailPopover: React.FC<BenchDetailModalProps> = ({
@@ -27,8 +29,12 @@ export const BenchDetailPopover: React.FC<BenchDetailModalProps> = ({
   students,
   onInitiateSwap,
   isLocked = false,
+  rules: propRules,
 }) => {
   if (!isOpen) return null;
+
+  const storeRules = useAppStore((state) => state.rules);
+  const activeRules = propRules || storeRules;
 
   const studentMap = new Map(students.map((s) => [s.id, s]));
 
@@ -59,13 +65,17 @@ export const BenchDetailPopover: React.FC<BenchDetailModalProps> = ({
   // Check pairwise conflicts on this bench
   const occupiedCandidates = benchSeats.map((s) => s.candidate).filter(Boolean) as ExamCandidate[];
   let conflictReason: string | null = null;
+  const separateSubject = activeRules?.sameBenchSubjectSeparation ?? activeRules?.sameSubjectCodeSeparation ?? true;
+  const separateBranch = activeRules?.sameBenchSeparation ?? true;
+  const separateSemester = activeRules?.sameSemesterSeparation ?? true;
+
   for (let i = 0; i < occupiedCandidates.length; i++) {
     for (let j = i + 1; j < occupiedCandidates.length; j++) {
       const a = occupiedCandidates[i];
       const b = occupiedCandidates[j];
       const subA = (a.subjectCode || '').trim().toLowerCase();
       const subB = (b.subjectCode || '').trim().toLowerCase();
-      if (subA && subB && subA === subB) {
+      if (separateSubject && subA && subB && subA === subB) {
         conflictReason = `Constraint C2: Occupants share subject code "${a.subjectCode}"`;
         break;
       }
@@ -73,7 +83,7 @@ export const BenchDetailPopover: React.FC<BenchDetailModalProps> = ({
       const branchB = (b.branch || '').trim().toLowerCase();
       const semA = (a.semester || '').trim().toLowerCase();
       const semB = (b.semester || '').trim().toLowerCase();
-      if (branchA && branchB && branchA === branchB && semA && semB && semA === semB) {
+      if (separateBranch && separateSemester && branchA && branchB && branchA === branchB && semA && semB && semA === semB) {
         conflictReason = `Constraint C3: Occupants share branch "${a.branch}" and semester "${a.semester}"`;
         break;
       }
@@ -135,7 +145,7 @@ export const BenchDetailPopover: React.FC<BenchDetailModalProps> = ({
         {/* Bench Occupants Grid */}
         <div className="p-6 space-y-4">
           <p className="text-xs text-slate-500 font-medium">
-            Bench Capacity: {room.studentsPerBench} student{room.studentsPerBench > 1 ? 's' : ''} (Pairwise C2/C3 separation enforced)
+            Bench Capacity: {room.studentsPerBench} student{room.studentsPerBench > 1 ? 's' : ''} {separateSubject ? '(Pairwise C2/C3 separation enforced)' : '(Same-subject bench sharing permitted)'}
           </p>
 
           <div className="grid gap-3">
