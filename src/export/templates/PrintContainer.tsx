@@ -69,25 +69,29 @@ export const PrintContainer: React.FC<PrintContainerProps> = ({
             )}
           </div>
 
-          {/* Compact 1-line metadata bar */}
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-[10.5px] border border-black bg-white px-2 py-0.5 font-medium text-black">
-            <div>
-              <span className="text-black font-normal">Exam: </span>
-              <strong className="text-black font-bold">{exam.examName}</strong>
+          {/* Compact 2-row metadata bar to prevent any overlap between Exam Name and Date/Time */}
+          <div className="mt-1 border border-black bg-white px-2 py-1 text-[10.5px] font-medium text-black space-y-0.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="min-w-0 flex-1 truncate">
+                <span className="text-black font-normal">Exam: </span>
+                <strong className="text-black font-bold">{exam.examName}</strong>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="text-black font-normal">Hall: </span>
+                <strong className="text-black font-bold">{roomName || 'All Halls'}</strong>
+              </div>
             </div>
-            <div>
-              <span className="text-black font-normal">Date: </span>
-              <strong className="text-black font-bold">{exam.examDate}</strong>
-            </div>
-            <div>
-              <span className="text-black font-normal">Session: </span>
-              <strong className="text-black font-bold">
-                {exam.session || 'FN'} {exam.startTime && exam.endTime ? `(${exam.startTime} - ${exam.endTime})` : ''}
-              </strong>
-            </div>
-            <div>
-              <span className="text-black font-normal">Hall: </span>
-              <strong className="text-black font-bold">{roomName || 'All Halls'}</strong>
+            <div className="flex items-center justify-between gap-2 text-[10px] border-t border-black pt-0.5">
+              <div>
+                <span className="text-black font-normal">Date: </span>
+                <strong className="text-black font-bold">{exam.examDate}</strong>
+              </div>
+              <div>
+                <span className="text-black font-normal">Session: </span>
+                <strong className="text-black font-bold">
+                  {exam.session || 'FN'} {exam.startTime && exam.endTime ? `(${exam.startTime} - ${exam.endTime})` : ''}
+                </strong>
+              </div>
             </div>
           </div>
         </div>
@@ -115,25 +119,33 @@ export const PrintContainer: React.FC<PrintContainerProps> = ({
             )}
           </div>
 
-          {/* Exam Metadata Grid */}
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border border-black bg-white p-2 font-medium text-black">
-            <div>
-              <span className="text-black font-normal">Examination: </span>
-              <strong className="text-black font-bold">{exam.examName}</strong>
+          {/* Exam Metadata Block - Redesigned into 2 distinct rows so Exam Name and Date never overlap */}
+          <div className="mt-2.5 border border-black bg-white p-2 text-xs font-medium text-black space-y-1.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-1.5">
+              <div className="min-w-0 flex-1">
+                <span className="text-black font-normal">Examination: </span>
+                <strong className="text-black font-bold break-words">{exam.examName}</strong>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="text-black font-normal">Hall / Room: </span>
+                <strong className="text-black font-bold">{roomName || 'All Halls'}</strong>
+              </div>
             </div>
-            <div>
-              <span className="text-black font-normal">Date: </span>
-              <strong className="text-black font-bold">{exam.examDate}</strong>
-            </div>
-            <div>
-              <span className="text-black font-normal">Session: </span>
-              <strong className="text-black font-bold">
-                {exam.session || 'FN'} {exam.startTime && exam.endTime ? `(${exam.startTime} - ${exam.endTime})` : ''}
-              </strong>
-            </div>
-            <div>
-              <span className="text-black font-normal">Hall / Room: </span>
-              <strong className="text-black font-bold">{roomName || 'All Halls'}</strong>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
+              <div>
+                <span className="text-black font-normal">Date: </span>
+                <strong className="text-black font-bold">{exam.examDate}</strong>
+              </div>
+              <div>
+                <span className="text-black font-normal">Session: </span>
+                <strong className="text-black font-bold">{exam.session || 'FN'}</strong>
+              </div>
+              <div>
+                <span className="text-black font-normal">Time: </span>
+                <strong className="text-black font-bold">
+                  {exam.startTime && exam.endTime ? `${exam.startTime} - ${exam.endTime}` : (exam.session === 'AN' ? '01:30 PM - 04:30 PM' : '09:30 AM - 12:30 PM')}
+                </strong>
+              </div>
             </div>
           </div>
         </div>

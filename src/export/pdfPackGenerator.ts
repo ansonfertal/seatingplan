@@ -6,7 +6,7 @@ import type { Exam, ExamDetails } from '../models/exam';
 import { formatRegisterRange } from '../utils/rangeFormatter';
 import { getClassroomColumnRows } from '../utils/capacityCalculator';
 
-// Helper to draw standard strictly monochrome header on jsPDF document
+// Helper to draw standard strictly monochrome header on jsPDF document with zero text overlap
 function addHeader(
   pdf: jsPDF,
   exam: Exam | ExamDetails,
@@ -18,40 +18,58 @@ function addHeader(
   const margin = 10;
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
+  pdf.setFontSize(12);
   pdf.setTextColor(0, 0, 0); // Strictly black
   const instName = exam.institutionName || 'Albertian Institute of Science and Technology';
-  pdf.text(instName.toUpperCase(), width / 2, 13, { align: 'center' });
+  pdf.text(instName.toUpperCase(), width / 2, 11, { align: 'center' });
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(8);
   pdf.setTextColor(0, 0, 0);
   const location = exam.institutionLocation || 'Kalamassery, Kochi - 682022';
-  pdf.text(location, width / 2, 18, { align: 'center' });
+  pdf.text(location, width / 2, 15.5, { align: 'center' });
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10.5);
+  pdf.setFontSize(10);
   pdf.setTextColor(0, 0, 0);
-  pdf.text(title.toUpperCase(), width / 2, 23.5, { align: 'center' });
+  pdf.text(title.toUpperCase(), width / 2, 20.5, { align: 'center' });
 
   // Draw separator line (Strictly black)
   pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.4);
-  pdf.line(margin, 26, width - margin, 26);
+  pdf.setLineWidth(0.35);
+  pdf.line(margin, 23, width - margin, 23);
 
-  // Metadata block
+  // Metadata block - Row 1: Exam Name & Hall (Separate line from Date/Session/Time to prevent overlap)
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(0, 0, 0);
-  pdf.text(`Exam: ${exam.examName}`, margin, 30.5);
-  pdf.text(`Date: ${exam.examDate}`, margin + (isLandscape ? 70 : 48), 30.5);
-  pdf.text(`Session: ${exam.session || 'FN'}`, margin + (isLandscape ? 135 : 94), 30.5);
+
+  const hallText = roomName ? `Hall: ${roomName}` : '';
+  const hallWidth = roomName ? pdf.getTextWidth(hallText) + 4 : 0;
+  const maxExamWidth = width - 2 * margin - hallWidth;
+  const rawExam = `Exam: ${exam.examName}`;
+  const examText = pdf.getTextWidth(rawExam) > maxExamWidth
+    ? `${rawExam.substring(0, Math.floor(maxExamWidth / 2.2))}...`
+    : rawExam;
+
+  pdf.text(examText, margin, 27);
   if (roomName) {
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Hall: ${roomName}`, width - margin, 30.5, { align: 'right' });
+    pdf.text(hallText, width - margin, 27, { align: 'right' });
+    pdf.setFont('helvetica', 'normal');
   }
 
-  pdf.line(margin, 33, width - margin, 33);
+  // Metadata block - Row 2: Date, Session, Time (Cleanly spaced, never overlaps with Exam Name)
+  pdf.text(`Date: ${exam.examDate}`, margin, 31);
+  const sessionText = `Session: ${exam.session || 'FN'}`;
+  pdf.text(sessionText, margin + (isLandscape ? 70 : 48), 31);
+
+  const timeStr = exam.startTime && exam.endTime
+    ? `Time: ${exam.startTime} - ${exam.endTime}`
+    : (exam.session === 'AN' ? 'Time: 01:30 PM - 04:30 PM' : 'Time: 09:30 AM - 12:30 PM');
+  pdf.text(timeStr, margin + (isLandscape ? 135 : 94), 31);
+
+  pdf.line(margin, 33.5, width - margin, 33.5);
 }
 
 /**
@@ -335,6 +353,157 @@ export function generateAttendanceSheet2Pdf(
     pdf.setFont('helvetica', 'normal');
     pdf.text(`${invigLabel} _______________________`, margin + 4, y + 17);
     pdf.text(`${chiefLabel} _______________________`, margin + 105, y + 17);
+  });
+
+  return pdf;
+}
+
+/**
+ * Builds Internal Examination Attendance Sheet PDF (Strictly Monochrome Black & White)
+ * Columns: Sl. No., Roll No., Name, Subject Code, Main Sheets, Additional Sheets, Signature
+ */
+export function generateInternalAttendanceSheetPdf(
+  exam: Exam | ExamDetails,
+  rooms: Room[],
+  assignments: AssignedSeat[],
+  students: ExamCandidate[]
+): jsPDF {
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const studentMap = new Map(students.map((s) => [s.id, s]));
+  let isFirstPage = true;
+
+  rooms.forEach((room) => {
+    const roomAssignments = assignments
+      .filter((a) => a.roomId === room.id || a.classroomId === room.id)
+      .map((a) => {
+        const studentId = a.studentId || a.candidateId;
+        const candidate = studentId ? studentMap.get(studentId) : undefined;
+        return { assignment: a, candidate };
+      })
+      .filter((item) => Boolean(item.candidate))
+      .sort((a, b) => {
+        const regA = a.candidate?.rollNo || a.candidate?.registerNumber || '';
+        const regB = b.candidate?.rollNo || b.candidate?.registerNumber || '';
+        return regA.localeCompare(regB, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+      });
+
+    if (roomAssignments.length === 0) return;
+
+    if (!isFirstPage) pdf.addPage('a4', 'portrait');
+    isFirstPage = false;
+
+    addHeader(pdf, exam, 'INTERNAL EXAMINATION ATTENDANCE SHEET', room.name, false);
+
+    // Column definitions with exact bounding widths (Sum = 190mm)
+    const margin = 10;
+    const colWidths = [12, 34, 48, 26, 22, 22, 26];
+    const colHeaders = [
+      'Sl. No.',
+      'Roll No.',
+      'Name',
+      'Subject Code',
+      'Main Sheets',
+      'Addl. Sheets',
+      'Signature',
+    ];
+
+    const drawTableHeader = (currentY: number) => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setFillColor(255, 255, 255); // Pure white background
+      pdf.setTextColor(0, 0, 0); // Pure black text
+
+      let curX = margin;
+      for (let i = 0; i < colWidths.length; i++) {
+        const w = colWidths[i];
+        pdf.rect(curX, currentY, w, 7, 'S');
+        if (i === 0 || i >= 3) {
+          pdf.text(colHeaders[i], curX + w / 2, currentY + 4.8, { align: 'center' });
+        } else {
+          pdf.text(colHeaders[i], curX + 2, currentY + 4.8);
+        }
+        curX += w;
+      }
+    };
+
+    let y = 37;
+    drawTableHeader(y);
+    y += 7;
+
+    const rowHeight = 9.5;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+
+    roomAssignments.forEach(({ candidate }, idx) => {
+      if (y + rowHeight > 262) {
+        pdf.addPage('a4', 'portrait');
+        addHeader(pdf, exam, 'INTERNAL EXAMINATION ATTENDANCE SHEET (CONT.)', room.name, false);
+        y = 37;
+        drawTableHeader(y);
+        y += 7;
+      }
+
+      let curX = margin;
+      for (let i = 0; i < colWidths.length; i++) {
+        pdf.setDrawColor(0, 0, 0);
+        pdf.rect(curX, y, colWidths[i], rowHeight, 'S');
+        curX += colWidths[i];
+      }
+
+      // Column 0: Sl. No.
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(String(idx + 1), margin + colWidths[0] / 2, y + 6, { align: 'center' });
+
+      // Column 1: Roll No.
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      const roll = (candidate?.rollNo || candidate?.registerNumber || '').substring(0, 15);
+      pdf.text(roll, margin + colWidths[0] + 2, y + 6);
+
+      // Column 2: Name
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.text((candidate?.name || '').substring(0, 24), margin + colWidths[0] + colWidths[1] + 2, y + 6);
+
+      // Column 3: Subject Code
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      const codeX = margin + colWidths[0] + colWidths[1] + colWidths[2];
+      pdf.text(
+        (candidate?.subjectCode || '-').substring(0, 12),
+        codeX + colWidths[3] / 2,
+        y + 6,
+        { align: 'center' }
+      );
+
+      // Columns 4 (Main Sheets), 5 (Addl. Sheets), 6 (Signature) remain empty for invigilator entry / candidate signature
+      y += rowHeight;
+    });
+
+    // Institutional Footer Accountability Block
+    const footerY = Math.max(y + 4, 268);
+    if (footerY + 18 <= 288) {
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, footerY, 190, 16);
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Total Registered: ${roomAssignments.length}`, margin + 3, footerY + 5);
+      pdf.text('Present: _______', margin + 45, footerY + 5);
+      pdf.text('Absent: _______', margin + 85, footerY + 5);
+      pdf.text('Main Sheets: _______', margin + 120, footerY + 5);
+      pdf.text('Addl. Sheets: _______', margin + 158, footerY + 5);
+
+      pdf.text('Invigilator Signature: _______________________', margin + 3, footerY + 12);
+      pdf.text('Internal Exam Coordinator / HOD: _______________________', margin + 105, footerY + 12);
+    }
   });
 
   return pdf;

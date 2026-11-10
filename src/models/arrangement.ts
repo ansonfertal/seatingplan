@@ -144,6 +144,7 @@ export type SeatingArrangement = {
 export type PrintDocumentType =
   | 'attendance_1'
   | 'attendance_2'
+  | 'attendance_internal'
   | 'seating_notice'
   | 'daily_attendance'
   | 'room_seating_plan'

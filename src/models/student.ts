@@ -6,6 +6,7 @@ export type ExamCandidate = {
   id: string;
   examId?: string;
   registerNumber: string;
+  rollNo?: string;
   name: string;
   branch: string;
   semester?: string;

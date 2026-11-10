@@ -16,6 +16,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { useAppStore } from '../store/appStore';
 import { AttendanceSheet1 } from '../export/templates/AttendanceSheet1';
 import { AttendanceSheet2 } from '../export/templates/AttendanceSheet2';
+import { InternalAttendanceSheet } from '../export/templates/InternalAttendanceSheet';
 import { SeatingNoticeSheet } from '../export/templates/SeatingNoticeSheet';
 import { DailyAttendanceSheet } from '../export/templates/DailyAttendanceSheet';
 import { RoomSeatingPlanSheet } from '../export/templates/RoomSeatingPlanSheet';
@@ -27,6 +28,7 @@ import {
 import {
   generateAttendanceSheet1Pdf,
   generateAttendanceSheet2Pdf,
+  generateInternalAttendanceSheetPdf,
   generateSeatingNoticePdf,
   generateRoomSeatingPlanPdf,
   generateDailyAttendancePdf,
@@ -41,6 +43,7 @@ import '../styles/printEngine.css';
 export type TemplateTab =
   | 'attendance_1'
   | 'attendance_2'
+  | 'attendance_internal'
   | 'seating_notice'
   | 'daily_attendance'
   | 'room_seating_plan'
@@ -109,6 +112,9 @@ export const ExportScreen: React.FC = () => {
     } else if (activeTab === 'attendance_2') {
       const pdf = generateAttendanceSheet2Pdf(exam, classrooms, currentAssignments, students);
       downloadGeneratedPdf(pdf, `Attendance_Sheet_2_${examCleanName}_${examDate}.pdf`);
+    } else if (activeTab === 'attendance_internal') {
+      const pdf = generateInternalAttendanceSheetPdf(exam, classrooms, currentAssignments, students);
+      downloadGeneratedPdf(pdf, `Internal_Attendance_Sheet_${examCleanName}_${examDate}.pdf`);
     } else if (activeTab === 'seating_notice') {
       const pdf = generateSeatingNoticePdf(exam, classrooms, currentAssignments, students, effectiveRoomId);
       downloadGeneratedPdf(pdf, `Seating_Notice_${examCleanName}_${examDate}.pdf`);
@@ -233,6 +239,17 @@ export const ExportScreen: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('attendance_internal')}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+              activeTab === 'attendance_internal'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Internal Exam Attendance (Main & Addl Sheets)
+          </button>
+
+          <button
             onClick={() => setActiveTab('room_seating_plan')}
             className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
               activeTab === 'room_seating_plan'
@@ -311,6 +328,16 @@ export const ExportScreen: React.FC = () => {
 
         {activeTab === 'attendance_2' && (
           <AttendanceSheet2
+            exam={exam}
+            rooms={classrooms}
+            assignments={currentAssignments}
+            students={students}
+            targetRoomId={effectiveRoomId}
+          />
+        )}
+
+        {activeTab === 'attendance_internal' && (
+          <InternalAttendanceSheet
             exam={exam}
             rooms={classrooms}
             assignments={currentAssignments}
